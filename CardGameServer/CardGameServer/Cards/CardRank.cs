@@ -1,6 +1,6 @@
 ﻿namespace CardGameServer.Cards
 {
-    enum CardRank : byte
+    public enum CardRank : byte
     {
         Two = 2,
         Three = 3,
