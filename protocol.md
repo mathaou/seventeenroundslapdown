@@ -11,6 +11,8 @@ A single TCP server is opened on port 6789. Packet payload is a JSON object enco
 Cards are represented as 8-bit unsigned integers, where the first four bits represent the rank, and the last four bits represent the suit.
 
 ```
+Text: Queen of Hearts
+Dec: 195
 Hex: 0xC3
 Bin: 11000011
      1100 (Queen)
@@ -57,7 +59,7 @@ After this packet is sent out and before the game starts, no players may join th
 
 ```json
 {
-    "msgtype": "game_ready",
+    "msg_type": "game_ready",
     "countdown": 3, // Countdown timer, starts immediately upon receipt
 }
 ```
@@ -69,11 +71,44 @@ hand, and some basic information on other players. The packet each client receiv
 
 ```json
 {
-    "msgtype": "game_start",
+    "msg_type": "game_start",
     "client_info": {
         "player_index": 1, // Client becomes Player 2
         "hand": [ ... ], // Array of card IDs
     }
+}
+```
+
+### client_play_card
+
+Sent when any player plays a card. Contains information about the player
+who played the card, the card played, and the result of the play.
+
+```json
+{
+    "msg_type": "client_play_card",
+    "player_index": 2, // Player 3 plays a card
+    "card": 132, // 8 of Spades
+    // Result of play
+    // -1 if no action, otherwise player index of round winner
+    "result_type": -1
+}
+```
+
+### client_reject
+
+Sent when a player attempts to connect to the server but they are rejected
+for some reason. The server disconnects the client right after sending this packet.
+
+#### Rejection reason strings:
+
+* `server_full`: The server is full and cannot accept any more players.
+* `whitelist`: The client IP was not found on the server's whitelist.
+
+```json
+{
+    "msg_type": "client_reject",
+    "reject_reason": "server_full"
 }
 ```
 
@@ -85,7 +120,7 @@ Sent when a player plays a card from their hand.
 
 ```json
 {
-    "msgtype": "play_card",
+    "msg_type": "play_card",
     "card_index": 1, // Second card in hand
     "card_id": 179 // Jack of Hearts
 }

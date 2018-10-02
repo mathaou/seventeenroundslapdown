@@ -27,7 +27,26 @@ namespace CardGameServer
         public PlayerClient Client
         {
             get => _client;
-            set => _client = value;
+            set
+            {
+                if (_client != null)
+                {
+                    _client.Disconnected -= OnClientDisconnected;
+                }
+
+                if (value != null)
+                {
+                    _client.Disconnected += OnClientDisconnected;
+                }
+                _client = value;
+            }
+        }
+
+        public bool IsAutonomous => _client == null;
+
+        private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        {
+            Client = null;
         }
 
         public int HandCount => _hand.Count;
