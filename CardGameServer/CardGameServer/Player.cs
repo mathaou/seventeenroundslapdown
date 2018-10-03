@@ -1,4 +1,5 @@
 ﻿using CardGameServer.Cards;
+using CardGameServer.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,14 +33,21 @@ namespace CardGameServer
                 if (_client != null)
                 {
                     _client.Disconnected -= OnClientDisconnected;
+                    _client.MessageReceived -= OnClientMessageReceived;
                 }
 
                 if (value != null)
                 {
                     _client.Disconnected += OnClientDisconnected;
+                    _client.MessageReceived += OnClientMessageReceived;
                 }
                 _client = value;
             }
+        }
+
+        private void OnClientMessageReceived(object sender, ClientMessageEventArgs e)
+        {
+            ClientMessage.Run(_game, this, e);
         }
 
         public bool IsAutonomous => _client == null;

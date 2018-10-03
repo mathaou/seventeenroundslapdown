@@ -27,15 +27,33 @@ namespace CardGameServer
             if (!_server.Start()) return;
             
             _server.ClientConnected += OnClientConnected;
+            _server.ClientDisconnected += OnClientDisconnected;
 
             Console.WriteLine("Game ready");
 
             _active = true;
         }
 
+        private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        {
+            foreach (var player in _players)
+            {
+                if (player.Client == e.Client)
+                {
+                    player.Client = null;
+                }
+            }
+        }
+
         private void OnClientConnected(object sender, ClientConnectedEventArgs e)
         {
-            // TODO: Add new client to first client-less player slot
+            foreach(var player in _players)
+            {
+                if (player.Client == null)
+                {
+                    player.Client = e.Client;
+                }
+            }
         }
     }
 }

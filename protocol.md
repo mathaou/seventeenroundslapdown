@@ -95,6 +95,18 @@ who played the card, the card played, and the result of the play.
 }
 ```
 
+### player_turn
+
+Sent when the server updates the player whose turn it is.
+
+```json
+{
+    "msg_type": "player_turn",
+    // Will be set to -1 if it's nobody's turn for whatever reason
+    "player_index": 1, // Player 2 is up
+}
+```
+
 ### client_reject
 
 Sent when a player attempts to connect to the server but they are rejected
@@ -125,3 +137,4 @@ Sent when a player plays a card from their hand.
     "card_id": 179 // Jack of Hearts
 }
 ```
+

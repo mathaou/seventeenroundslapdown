@@ -17,6 +17,7 @@ namespace CardGameServer
         private bool _active;
 
         public event EventHandler<ClientConnectedEventArgs> ClientConnected;
+        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
 
         public GameServer()
         {
@@ -38,9 +39,8 @@ namespace CardGameServer
             }
             catch (Exception ex)
             {
-                // TODO: Handle failed startl
+                // TODO: Handle failed start
                 System.Console.WriteLine($"Exception occured on server start:\n{ex}");
-                // Interpolated strings will automatically call ToString on objects inserted in the string
                 return false;
             }
         }
@@ -54,6 +54,7 @@ namespace CardGameServer
                 playerClient.Disconnected += OnClientDisconnected;
                 ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
                 playerClient.Start();
+                Console.WriteLine($"Player {playerClient} has joined the game");
             }
             catch (Exception ex)
             {
@@ -65,7 +66,8 @@ namespace CardGameServer
 
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
-            
+            Console.WriteLine($"Player {e.Client} has disconnected ({e.DisconnectReason})");
+            ClientDisconnected?.Invoke(this, e);
         }
     }
 }

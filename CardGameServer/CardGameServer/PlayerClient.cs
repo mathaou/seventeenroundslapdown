@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CardGameServer
@@ -13,105 +15,147 @@ namespace CardGameServer
     public sealed class PlayerClient
     {
         private const string DefaultDisconnectReason = "Client disconnected";
-        private const int ReceiveBufferSize = 4096;
+        private const int BufferSize = 4096;
 
         private readonly byte[] _receiveBuffer;
         private bool _active = false;
         private readonly NetworkStream _stream;
+        private readonly string _clientId;
         private string _disconnectReason = DefaultDisconnectReason;
+        private readonly Thread _listenThread;
 
         public PlayerClient(TcpClient client)
         {
             Client = client;
             _stream = client.GetStream();
-            _receiveBuffer = new byte[ReceiveBufferSize];
+            _clientId = (client.Client.RemoteEndPoint as IPEndPoint).Address.ToString();
+            _receiveBuffer = new byte[BufferSize];
+            _listenThread = new Thread(Listen);
         }
 
         public TcpClient Client { get; }
 
         public event EventHandler<ClientDisconnectedEventArgs> Disconnected;
 
+        public event EventHandler<ClientMessageEventArgs> MessageReceived;
+
         public void Start()
         {
             if (_active) return;
 
-            _active = true; 
+            _active = true;
 
-            Listen();
+            _listenThread.Start();
         }
 
-        private async void Listen()
+        public void Stop()
         {
+            if (!_active) return;
+
+            _active = false;
+
             try
-            {   
-                bool success = await Task.Run(() => Client.Client.Poll(0, SelectMode.SelectRead));
+            {
+                Client.Close();
+                _listenThread.Join();
+            }
+            catch
+            {
 
-                int receiveSize = Client.Client.Receive(_receiveBuffer, SocketFlags.Peek);
-                
-                if (receiveSize <= 0)
-                {
-                    // Client has disconnected.
-                    _active = false;                    
-                    return;
-                }
+            }
+        }
 
-                using (var reader = new StreamReader(new MemoryStream(_receiveBuffer, 0, receiveSize), Encoding.UTF8))
-                using (var jsonReader = new JsonTextReader(reader))
+        private void Send(JObject obj)
+        {   
+            if (Client == null || obj == null) return;
+
+            var jsonString = obj.ToString();
+            var jsonStringBytes = Encoding.UTF8.GetBytes(jsonString);
+
+            _stream.Write(jsonStringBytes, 0, jsonStringBytes.Length);
+        }
+
+        public override string ToString() => _clientId;
+
+        private void Listen()
+        {
+            while(_active)
+            {
+                try
                 {
-                    // Read JSON object from packet
-                    if (jsonReader.Read() && jsonReader.TokenType == JsonToken.StartObject)
+                    bool success = Client.Client.Poll(0, SelectMode.SelectRead);
+
+                    int receiveSize = Client.Client.Receive(_receiveBuffer, SocketFlags.Peek);
+
+                    if (receiveSize <= 0)
                     {
-                        var obj = jsonReader.Value as JObject;
+                        // Client has disconnected.
+                        _active = false;
+                        return;
+                    }
 
-                        var msgType = obj["msg_type"];
-
-                        if (msgType != null)
+                    try
+                    {
+                        using (var reader = new StreamReader(new MemoryStream(_receiveBuffer, 0, receiveSize), Encoding.UTF8))
+                        using (var jsonReader = new JsonTextReader(reader))
                         {
-                            // Send packet data off to correct interpreter
+                            while (!reader.EndOfStream)
+                            {
+                                var obj = JToken.ReadFrom(jsonReader);
 
+                                var msgType = obj["msg_type"] as JValue;
 
+                                if (msgType != null)
+                                {
+                                    // Send packet data off to correct interpreter
+                                    MessageReceived?.Invoke(this, new ClientMessageEventArgs(msgType.Value.ToString(), obj as JObject));
+                                }
+                            }
                         }
                     }
+                    catch (JsonReaderException ex)
+                    {
+                        Console.WriteLine($"Received sketchy data from {_clientId} ({ex.Message})");
+                    }
                 }
-                
-            }
-            catch(SocketException ex)
-            {
-                // Log socket errors
-                Console.WriteLine($"Socket error in PlayerClient.Listen():\n{ex}");
-                switch(ex.SocketErrorCode)
+                catch (SocketException ex)
                 {
-                    case SocketError.TimedOut:
-                        _disconnectReason = "Timed out";
-                        return;
-                    case SocketError.ConnectionReset:
-                        _disconnectReason = "Connection reset";
-                        return;
-                }
-                _active = false;
-            }
-            catch(Exception ex)
-            {
-                // Log misc errors
-                Console.WriteLine($"Exception occured in @PlayerClient.Listen():\n{ex}");
+                    // Log socket errors
 
-            }
-            finally
-            {
-                if (!Client.Connected)
-                {
+                    switch (ex.SocketErrorCode)
+                    {
+                        case SocketError.TimedOut:
+                            _disconnectReason = "Timed out";
+                            break;
+                        case SocketError.ConnectionReset:
+                            _disconnectReason = "Connection reset";
+                            break;
+                        default:
+                            Console.WriteLine($"Socket error in PlayerClient.Listen():\n{ex}");
+                            break;
+                    }
                     _active = false;
                 }
+                catch (Exception ex)
+                {
+                    // Log misc errors
+                    Console.WriteLine($"Exception occured in @PlayerClient.Listen():\n{ex}");
 
-                if (_active)
-                {
-                    Listen();
                 }
-                else
+                finally
                 {
-                    Disconnected?.Invoke(this, new ClientDisconnectedEventArgs(this, _disconnectReason));
+                    if (!Client.Connected)
+                    {
+                        _active = false;
+                    }
+
+                    if (!_active)                    
+                    {
+                        Disconnected?.Invoke(this, new ClientDisconnectedEventArgs(this, _disconnectReason));
+                    }
                 }
             }
+            
         }
     }
 }
