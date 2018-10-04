@@ -75,6 +75,7 @@ namespace CardGameServer
                 if (player.Client == e.Client)
                 {
                     player.Client = null;
+                    break;
                 }
             }
         }
@@ -88,6 +89,7 @@ namespace CardGameServer
                 {
                     player.Client = e.Client;
                     player.SendClientInfo();
+                    break;
                 }
             }
         }

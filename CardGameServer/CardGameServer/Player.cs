@@ -28,6 +28,8 @@ namespace CardGameServer
 
         public int Score { get; set; }
 
+        public event EventHandler<PlayerPlayCardEventArgs> PlayingCard;
+
         public PlayerClient Client
         {
             get => _client;
@@ -59,6 +61,17 @@ namespace CardGameServer
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
             Client = null;
+        }
+
+        public void PlayCard(int cardIndex)
+        {
+            var card = _hand[cardIndex];
+            var e = new PlayerPlayCardEventArgs(this, card);
+            PlayingCard?.Invoke(this, e);
+            if (!e.Cancel)
+            {
+                _hand.RemoveAt(cardIndex);
+            }
         }
 
         public void SendClientInfo()

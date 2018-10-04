@@ -3,16 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CardGameServer.Cards;
 using Newtonsoft.Json.Linq;
 
 namespace CardGameServer.Messages
 {
-    [ClientMessageType("client_play_card")]
+    [ClientMessageType("play_card")]
     public class ClientPlayCardMessage : ClientMessage
     {
         public override void Run(Game g, Player p, JObject message)
         {
-            p.Client.Send(JObject.FromObject(new { msg = "Client Play Card message received" }));
+            var card = Card.FromCardCode(message["card_id"].Value<byte>());
+            int cardIndex = message["card_index"].Value<int>();
+
+            // Make sure it's their turn
+            if (g.TurnIndex != p.Id) return;
+            // Make sure the card exists
+            if (cardIndex < 0 || cardIndex >= p.HandCount) return;
+
+            p.PlayCard(cardIndex);
+            Console.WriteLine($"Player {p.Id + 1} played card: {card} from index {cardIndex}");
         }
     }
 }
