@@ -109,11 +109,15 @@ hand, and some basic information on other players. The packet each client receiv
 Sent when any player plays a card. Contains information about the player
 who played the card, the card played, and the result of the play.
 
+When sent to the client who played the card, that client will update
+their local hand.
+
 ```json
 {
     "msg_type": "client_play_card",
     "player_index": 2, // Player 3 plays a card
     "card": 132, // 8 of Spades
+    "round": 3, // Round number that the play is for
     // Result of play
     // -1 if no action, otherwise player index of round winner
     "result_type": -1

@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CardGameServer
 {
@@ -13,16 +11,20 @@ namespace CardGameServer
         private readonly List<Player> _players;
         private bool _active = false;
         private readonly Random _rng;
+        private readonly Card?[] _pool;
 
         public Game(int playerCount) //initiate game server and list of players
         {
             _rng = new Random();
             _server = new GameServer();
             _players = new List<Player>();
+            _pool = new Card?[playerCount];
             MaxPlayers = playerCount;
             for(int i = 0; i < playerCount; i++)
             {
-                _players.Add(new Player(this, i));
+                var p = new Player(this, i);
+                p.PlayingCard += OnPlayingCard;
+                _players.Add(p);
             }
         }
 
@@ -31,6 +33,8 @@ namespace CardGameServer
         public int Round { get; set; }
 
         public int TurnIndex { get; set; }
+
+        public int LeadingPlayerId { get; set; }
 
         public void Start() //start server
         {
@@ -66,7 +70,9 @@ namespace CardGameServer
 
             Round = 0;
             TurnIndex = 0;
+            LeadingPlayerId = 0;
         }
+        
 
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
@@ -93,5 +99,66 @@ namespace CardGameServer
                 }
             }
         }
+
+        private void OnPlayingCard(object sender, PlayerPlayCardEventArgs e)
+        {
+            if (TurnIndex != e.Player.Id)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            // ID of round winner
+            int winningId = -1;
+
+            _pool[e.Player.Id] = e.Card;
+
+            if (_pool.All(c => c != null))
+            {
+                // Suit of leading player's card
+                var leadingSuit = _pool[LeadingPlayerId].Value.Suit;
+                // Highest card rank found in round pool
+                var highestRank = _pool[LeadingPlayerId].Value.Rank;
+
+                // Find winning card
+                for (int i = 0; i < _pool.Length; i++)
+                {
+                    if (_pool[i].Value.Suit == leadingSuit && _pool[i].Value.Rank > highestRank)
+                    {
+                        winningId = i;
+                        highestRank = _pool[i].Value.Rank;
+                    }
+                }
+
+                // Update score for round winner
+                _players[winningId].Score++;
+
+                // Empty pool
+                for (int i = 0; i < _pool.Length; i++)
+                {
+                    _pool[i] = null;
+                }
+
+                Round++;
+                LeadingPlayerId = winningId;
+                TurnIndex = LeadingPlayerId;
+            }
+
+            // Notify players of play and result
+            var msgPlayCard = new
+            {
+                msg_type = "client_play_card",
+                player_index = e.Player.Id,
+                card = e.Card.GetCardCode(),
+                round = Round,
+                result_type = winningId
+            };
+
+            _server.SendAll(msgPlayCard);
+
+            NextTurn();
+        }
+
+        private void NextTurn() => TurnIndex = (TurnIndex + 1) % MaxPlayers;
     }
 }

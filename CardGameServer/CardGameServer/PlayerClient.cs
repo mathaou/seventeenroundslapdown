@@ -65,14 +65,14 @@ namespace CardGameServer
             }
         }
 
-        public void Send(JObject obj)
+        public async void Send(JObject obj)
         {   
             if (Client == null || obj == null) return;
 
             var jsonString = obj.ToString();
             var jsonStringBytes = Encoding.UTF8.GetBytes(jsonString);
 
-            _stream.Write(jsonStringBytes, 0, jsonStringBytes.Length);
+            await _stream.WriteAsync(jsonStringBytes, 0, jsonStringBytes.Length);
         }
 
         public override string ToString() => _clientId;
