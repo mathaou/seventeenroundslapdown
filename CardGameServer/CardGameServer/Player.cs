@@ -1,5 +1,6 @@
 ﻿using CardGameServer.Cards;
 using CardGameServer.Messages;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,8 @@ namespace CardGameServer
 
         public int Id { get; }
 
+        public int Score { get; set; }
+
         public PlayerClient Client
         {
             get => _client;
@@ -36,12 +39,13 @@ namespace CardGameServer
                     _client.MessageReceived -= OnClientMessageReceived;
                 }
 
+                _client = value;
+
                 if (value != null)
                 {
                     _client.Disconnected += OnClientDisconnected;
                     _client.MessageReceived += OnClientMessageReceived;
                 }
-                _client = value;
             }
         }
 
@@ -56,6 +60,22 @@ namespace CardGameServer
         {
             Client = null;
         }
+
+        public void SendClientInfo()
+        {
+            if (Client == null) return;
+            var obj = new JObject
+            {
+                ["msg_type"] = "client_info",
+                ["player_id"] = Id,
+                ["cards"] = new JArray(_hand.Select(c => c.GetCardCode()).ToArray())
+            };
+            Client?.Send(obj);
+        }
+
+        public void ClearHand() => _hand.Clear();
+
+        public void AddToHand(IEnumerable<Card> cards) => _hand.AddRange(cards);
 
         public int HandCount => _hand.Count;
     }

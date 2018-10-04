@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CardGameServer.Messages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -21,6 +22,7 @@ namespace CardGameServer
 
         public GameServer()
         {
+            ClientMessage.Init();
             _server = new TcpListener(IPAddress.Any, ServerPort);            
         }
 

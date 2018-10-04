@@ -65,7 +65,7 @@ namespace CardGameServer
             }
         }
 
-        private void Send(JObject obj)
+        public void Send(JObject obj)
         {   
             if (Client == null || obj == null) return;
 

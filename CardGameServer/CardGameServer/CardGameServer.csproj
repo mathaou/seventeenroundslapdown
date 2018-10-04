@@ -52,8 +52,12 @@
     <Compile Include="Cards\CardSuit.cs" />
     <Compile Include="ClientConnectedEventArgs.cs" />
     <Compile Include="ClientDisconnectedEventArgs.cs" />
+    <Compile Include="ClientMessageEventArgs.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameServer.cs" />
+    <Compile Include="Messages\ClientMessage.cs" />
+    <Compile Include="Messages\ClientMessageTypeAttribute.cs" />
+    <Compile Include="Messages\ClientPlayCardMessage.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="PlayerClient.cs" />
     <Compile Include="Program.cs" />

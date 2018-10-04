@@ -52,15 +52,40 @@ If they connect during a game, they are provided the hand of the computer-driven
 
 ## Server message types
 
-### game_ready
+### game_state
 
-Sent when the server is preparing to start a new game.
-After this packet is sent out and before the game starts, no players may join the server.
+Sent to each client when they join an active session.
 
 ```json
 {
-    "msg_type": "game_ready",
-    "countdown": 3, // Countdown timer, starts immediately upon receipt
+    "msg_type": "game_state",
+    "round": 12,
+    "game_state": "playing",
+    "players": {
+        "0": {
+            "name": "Matt",
+            "hand_size": 12,
+            "points": 3
+        },
+        "1": {
+            "name": "Nick",
+            "hand_size": 12,
+            "points": 8
+        }
+    }
+    "player_turn": 0
+}
+```
+
+### client_info
+
+Informs the client of the cards available in their hand.
+
+```json
+{
+    "msg_type": "client_hand",
+    "player_id": 0,
+    "cards": [ ... ]
 }
 ```
 
