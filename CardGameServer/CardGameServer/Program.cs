@@ -11,7 +11,7 @@ namespace CardGameServer
         static void Main(string[] args)
         {
             Console.Title = "17RSD Server";
-            var game = new Game(4);
+            var game = new Game(3);
             game.Start();
             Console.ReadKey(true);
         }

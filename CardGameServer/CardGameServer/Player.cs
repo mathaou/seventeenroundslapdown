@@ -16,12 +16,14 @@ namespace CardGameServer
         private readonly Game _game;
         private PlayerClient _client;
         private List<Card> _hand;
+        private readonly Random _rng;
 
         public Player(Game game, int id)
         {
             _game = game;
             Id = id;
             _hand = new List<Card>(InitialHandListCapacity);
+            _rng = game.RNG;
         }
 
         public int Id { get; }
@@ -63,10 +65,29 @@ namespace CardGameServer
             Client = null;
         }
 
+        public async void PromptTurn()
+        {
+            // Where player is autonomous, have them automatically select and play a card
+            if (Client == null)
+            {
+                await Task.Delay(1500);
+                if (_game.LeadingPlayerId == Id || _game.LeadingSuit == null)
+                {
+                    PlayCard(_rng.Next(_hand.Count));
+                }
+                else
+                {
+                    var matchingSuitCards = _hand.Select((c, i) => (c, i)).Where(t => t.c.Suit == _game.LeadingSuit).ToArray();
+                    PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[_rng.Next(matchingSuitCards.Length)].i : _rng.Next(_hand.Count));
+                }
+            }
+        }
+
         public void PlayCard(int cardIndex)
         {
             var card = _hand[cardIndex];
             var e = new PlayerPlayCardEventArgs(this, card);
+            Console.WriteLine($"Player {Id + 1} playing {card} (i = {cardIndex})");
             PlayingCard?.Invoke(this, e);
             if (!e.Cancel)
             {

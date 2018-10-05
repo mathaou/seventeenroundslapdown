@@ -36,6 +36,10 @@ namespace CardGameServer
 
         public int LeadingPlayerId { get; set; }
 
+        public Random RNG => _rng;
+
+        public CardSuit? LeadingSuit => _pool[LeadingPlayerId]?.Suit;
+
         public void Start() //start server
         {
             if (_active) return;
@@ -71,6 +75,7 @@ namespace CardGameServer
             Round = 0;
             TurnIndex = 0;
             LeadingPlayerId = 0;
+            PromptCurrentPlayer();
         }
         
 
@@ -100,6 +105,11 @@ namespace CardGameServer
             }
         }
 
+        private void PromptCurrentPlayer()
+        {
+            _players[TurnIndex].PromptTurn();
+        }
+
         private void OnPlayingCard(object sender, PlayerPlayCardEventArgs e)
         {
             if (TurnIndex != e.Player.Id)
@@ -109,7 +119,10 @@ namespace CardGameServer
             }
 
             // ID of round winner
-            int winningId = -1;
+            int winningId = LeadingPlayerId;
+
+            // Round of play
+            int playRound = Round;
 
             _pool[e.Player.Id] = e.Card;
 
@@ -139,9 +152,16 @@ namespace CardGameServer
                     _pool[i] = null;
                 }
 
+                Console.WriteLine($"Player {winningId + 1} won round {Round}");
+
                 Round++;
                 LeadingPlayerId = winningId;
                 TurnIndex = LeadingPlayerId;
+                PromptCurrentPlayer();
+            }
+            else
+            {
+                NextTurn();
             }
 
             // Notify players of play and result
@@ -150,15 +170,17 @@ namespace CardGameServer
                 msg_type = "client_play_card",
                 player_index = e.Player.Id,
                 card = e.Card.GetCardCode(),
-                round = Round,
+                round = playRound,
                 result_type = winningId
             };
 
             _server.SendAll(msgPlayCard);
-
-            NextTurn();
         }
 
-        private void NextTurn() => TurnIndex = (TurnIndex + 1) % MaxPlayers;
+        private void NextTurn()
+        {
+            TurnIndex = (TurnIndex + 1) % MaxPlayers;
+            PromptCurrentPlayer();
+        }
     }
 }

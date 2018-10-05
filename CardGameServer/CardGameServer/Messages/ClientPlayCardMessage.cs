@@ -21,8 +21,7 @@ namespace CardGameServer.Messages
             // Make sure the card exists
             if (cardIndex < 0 || cardIndex >= p.HandCount) return;
 
-            p.PlayCard(cardIndex);
-            Console.WriteLine($"Player {p.Id + 1} played card: {card} from index {cardIndex}");
+            p.PlayCard(cardIndex);            
         }
     }
 }
