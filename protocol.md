@@ -15,8 +15,9 @@ Text: Queen of Hearts
 Dec: 195
 Hex: 0xC3
 Bin: 11000011
-     1100 (Queen)
-         0011 (Hearts)
+     ||||||||
+     1100|||| (1100 = Queen)
+         0011 (0011 = Hearts)
 ```
 
 ### Ranks
@@ -104,7 +105,7 @@ hand, and some basic information on other players. The packet each client receiv
 }
 ```
 
-### client_play_card
+### client_move
 
 Sent when any player plays a card. Contains information about the player
 who played the card, the card played, and the result of the play.
@@ -114,26 +115,26 @@ their local hand.
 
 ```json
 {
-    "msg_type": "client_play_card",
-    "player_index": 2, // Player 3 plays a card
+    "msg_type": "client_move",
+    "player_index": 1, // Player 2 plays a card
     "card": 132, // 8 of Spades
     "round": 3, // Round number that the play is for
+    "next_round": 3, // Round after play
+    "next_turn": 2, // Index of next player to go
     // Result of play
     // -1 if no action, otherwise player index of round winner
     "result_type": -1
 }
 ```
 
-### player_turn
+### player_score
 
-Sent when the server updates the player whose turn it is.
+Sent when a score for a player has been updated.
 
 ```json
-{
-    "msg_type": "player_turn",
-    // Will be set to -1 if it's nobody's turn for whatever reason
-    "player_index": 1, // Player 2 is up
-}
+    "msg_type": "player_score",
+    "player_index": 1, // Player 2
+    "score": 3 // 3 points
 ```
 
 ### client_reject

@@ -75,8 +75,7 @@ namespace CardGameServer
                 playerClient.Disconnected += OnClientDisconnected;
                 ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
                 playerClient.Start();
-                _clients.Add(playerClient);
-                Console.WriteLine($"Player {playerClient} has joined the game");
+                _clients.Add(playerClient);                
             }
             catch (Exception ex)
             {
@@ -88,7 +87,6 @@ namespace CardGameServer
 
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
-            Console.WriteLine($"Player {e.Client} has disconnected ({e.DisconnectReason})");
             _clients.Remove(e.Client);
             ClientDisconnected?.Invoke(this, e);
         }

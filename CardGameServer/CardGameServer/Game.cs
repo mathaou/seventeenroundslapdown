@@ -70,12 +70,13 @@ namespace CardGameServer
                 player.Score = 0;
                 player.ClearHand();
                 player.AddToHand(deck.GetRange(handSize * player.Id, handSize));
+                Console.WriteLine($"Player {player.Id + 1} hand: {player.GetCards().Select(c => c.ToString()).Aggregate((c, n) => $"{c}, {n}")}\n");
             }
 
             Round = 0;
             TurnIndex = 0;
             LeadingPlayerId = 0;
-            PromptCurrentPlayer();
+            if (_server.ConnectedPlayerCount > 0) PromptCurrentPlayer();
         }
         
 
@@ -85,6 +86,7 @@ namespace CardGameServer
             {
                 if (player.Client == e.Client)
                 {
+                    Console.WriteLine($"Player {player.Id + 1} has disconnected ({e.DisconnectReason})");
                     player.Client = null;
                     break;
                 }
@@ -99,6 +101,7 @@ namespace CardGameServer
                 if (player.Client == null)
                 {
                     player.Client = e.Client;
+                    Console.WriteLine($"Player {player.Id + 1} has joined the game");
                     player.SendClientInfo();
                     break;
                 }
@@ -144,7 +147,7 @@ namespace CardGameServer
                 }
 
                 // Update score for round winner
-                _players[winningId].Score++;
+                int winningScore = ++_players[winningId].Score;
 
                 // Empty pool
                 for (int i = 0; i < _pool.Length; i++)
@@ -154,10 +157,18 @@ namespace CardGameServer
 
                 Console.WriteLine($"Player {winningId + 1} won round {Round}");
 
+                var msgPlayerScore = new
+                {
+                    msg_type = "player_score",
+                    player_index = winningId,
+                    score = winningScore
+                };
+
+                _server.SendAll(msgPlayerScore);
+
                 Round++;
                 LeadingPlayerId = winningId;
-                TurnIndex = LeadingPlayerId;
-                PromptCurrentPlayer();
+                TurnIndex = LeadingPlayerId;                
             }
             else
             {
@@ -167,20 +178,22 @@ namespace CardGameServer
             // Notify players of play and result
             var msgPlayCard = new
             {
-                msg_type = "client_play_card",
+                msg_type = "client_move",
                 player_index = e.Player.Id,
                 card = e.Card.GetCardCode(),
                 round = playRound,
+                next_round = Round,
+                next_turn = TurnIndex,
                 result_type = winningId
             };
 
             _server.SendAll(msgPlayCard);
+            PromptCurrentPlayer();
         }
 
         private void NextTurn()
         {
             TurnIndex = (TurnIndex + 1) % MaxPlayers;
-            PromptCurrentPlayer();
         }
     }
 }

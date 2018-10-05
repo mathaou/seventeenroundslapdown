@@ -30,6 +30,11 @@ namespace CardGameServer
 
         public int Score { get; set; }
 
+        public IEnumerable<Card> GetCards()
+        {
+            foreach (var card in _hand) yield return card;
+        }
+
         public event EventHandler<PlayerPlayCardEventArgs> PlayingCard;
 
         public PlayerClient Client
@@ -83,8 +88,9 @@ namespace CardGameServer
             }
         }
 
-        public void PlayCard(int cardIndex)
+        public bool PlayCard(int cardIndex)
         {
+            if (cardIndex < 0 || cardIndex >= HandCount) return false;
             var card = _hand[cardIndex];
             var e = new PlayerPlayCardEventArgs(this, card);
             Console.WriteLine($"Player {Id + 1} playing {card} (i = {cardIndex})");
@@ -92,7 +98,9 @@ namespace CardGameServer
             if (!e.Cancel)
             {
                 _hand.RemoveAt(cardIndex);
+                return true;
             }
+            return false;
         }
 
         public void SendClientInfo()
@@ -102,7 +110,7 @@ namespace CardGameServer
             {
                 ["msg_type"] = "client_info",
                 ["player_id"] = Id,
-                ["cards"] = new JArray(_hand.Select(c => c.GetCardCode()).ToArray())
+                ["cards"] = new JArray(_hand.Select(c => (int)c.GetCardCode()).ToArray())
             };
             Client?.Send(obj);
         }

@@ -85,7 +85,7 @@ namespace CardGameServer
                 {
                     bool success = Client.Client.Poll(0, SelectMode.SelectRead);
 
-                    int receiveSize = Client.Client.Receive(_receiveBuffer, SocketFlags.Peek);
+                    int receiveSize = Client.Client.Receive(_receiveBuffer, SocketFlags.None);
 
                     if (receiveSize <= 0)
                     {
