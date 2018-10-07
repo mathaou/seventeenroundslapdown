@@ -78,6 +78,26 @@ Sent to each client when they join an active session.
 }
 ```
 
+### client_reject
+
+Sent when a player attempts to connect to the server but they are rejected
+for some reason. The server disconnects the client right after sending this packet.
+
+Sent in place of `game_state` packet when player connects. After packet
+is sent, client is disconnected.
+
+#### Rejection reason strings:
+
+* `server_full`: The server is full and cannot accept any more players.
+* `whitelist`: The client IP was not found on the server's whitelist.
+
+```json
+{
+    "msg_type": "client_reject",
+    "reject_reason": "server_full"
+}
+```
+
 ### client_info
 
 Informs the client of the cards available in their hand.
@@ -132,25 +152,10 @@ their local hand.
 Sent when a score for a player has been updated.
 
 ```json
+{
     "msg_type": "player_score",
     "player_index": 1, // Player 2
     "score": 3 // 3 points
-```
-
-### client_reject
-
-Sent when a player attempts to connect to the server but they are rejected
-for some reason. The server disconnects the client right after sending this packet.
-
-#### Rejection reason strings:
-
-* `server_full`: The server is full and cannot accept any more players.
-* `whitelist`: The client IP was not found on the server's whitelist.
-
-```json
-{
-    "msg_type": "client_reject",
-    "reject_reason": "server_full"
 }
 ```
 
