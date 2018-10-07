@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace CardGameServer
 {
@@ -13,6 +14,8 @@ namespace CardGameServer
 
         private readonly TcpListener _server;
         private readonly HashSet<PlayerClient> _clients;
+        private readonly Thread _acceptClientsThread;
+        private readonly object _startStopSync = new object();
 
         private bool _active;
 
@@ -24,34 +27,60 @@ namespace CardGameServer
             ClientMessage.Init();
             _server = new TcpListener(IPAddress.Any, ServerPort);
             _clients = new HashSet<PlayerClient>();
+            _acceptClientsThread = new Thread(AcceptClients);
         }
 
         public int ConnectedPlayerCount => _clients.Count;
 
         public bool Start()
         {
-            if (_active) return false;
+            lock(_startStopSync)
+            {
+                if (_active) return false;
 
-            try
-            {
-                Console.WriteLine("Starting server...");
-                _server.Start();
-                AcceptClientAsync();
-                _active = true;
-                Console.WriteLine("Server active");
-                return true;
+                try
+                {
+                    Console.WriteLine("Starting server...");
+                    _server.Start();
+                    _acceptClientsThread.Start();
+                    _active = true;
+                    Console.WriteLine("Server active");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    // TODO: Handle failed start
+                    Console.WriteLine($"Exception occured on server start:\n{ex}");
+                    return false;
+                }
             }
-            catch (Exception ex)
+        }
+
+        public bool Stop()
+        {
+            lock(_startStopSync)
             {
-                // TODO: Handle failed start
-                Console.WriteLine($"Exception occured on server start:\n{ex}");
-                return false;
+                if (!_active) return false;
+
+                try
+                {
+                    _active = false;
+                    _server.Stop();
+                    _acceptClientsThread.Join();
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An error occurred while stopping the server: {ex}");
+                }
+
+                return true;
             }
         }
 
         public void SendAll(JObject obj)
         {
-            foreach(var p in _clients)
+            foreach (var p in _clients)
             {
                 p.Send(obj);
             }
@@ -66,23 +95,24 @@ namespace CardGameServer
             }
         }
 
-        private async void AcceptClientAsync()
+        private void AcceptClients()
         {
-            try
+            while (_active)
             {
-                var client = await _server.AcceptTcpClientAsync();
-                var playerClient = new PlayerClient(client);
-                playerClient.Disconnected += OnClientDisconnected;
-                ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
-                playerClient.Start();
-                _clients.Add(playerClient);                
+                try
+                {
+                    var client = _server.AcceptTcpClient();
+                    var playerClient = new PlayerClient(client);
+                    playerClient.Disconnected += OnClientDisconnected;
+                    ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
+                    playerClient.Start();
+                    _clients.Add(playerClient);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception occured on client sync:\n{ex}");
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception occured on client sync:\n{ex}");
-            }
-
-            AcceptClientAsync();
         }
 
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)

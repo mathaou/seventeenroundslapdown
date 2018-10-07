@@ -7,20 +7,19 @@ namespace CardGameServer
 {
     public sealed class Game
     {
-        private readonly GameServer _server;
         private readonly List<Player> _players;
         private bool _active = false;
         private readonly Random _rng;
-        private readonly Card?[] _pool;
+        private readonly Card?[] _roundCards;
 
-        public Game(int playerCount) //initiate game server and list of players
+        public Game(GameSettings settings) //initiate game server and list of players
         {
+            Settings = settings;
             _rng = new Random();
-            _server = new GameServer();
+            Server = new GameServer();
             _players = new List<Player>();
-            _pool = new Card?[playerCount];
-            MaxPlayers = playerCount;
-            for(int i = 0; i < playerCount; i++)
+            _roundCards = new Card?[settings.MaxPlayers];
+            for(int i = 0; i < MaxPlayers; i++)
             {
                 var p = new Player(this, i);
                 p.PlayingCard += OnPlayingCard;
@@ -28,7 +27,9 @@ namespace CardGameServer
             }
         }
 
-        public int MaxPlayers { get; }
+        public int MaxPlayers => Settings.MaxPlayers;
+
+        public GameServer Server { get; }
 
         public int Round { get; set; }
 
@@ -36,26 +37,39 @@ namespace CardGameServer
 
         public int LeadingPlayerId { get; set; }
 
+        public GameSettings Settings { get; }
+
         public Random RNG => _rng;
 
-        public CardSuit? LeadingSuit => _pool[LeadingPlayerId]?.Suit;
+        public CardSuit? LeadingSuit => _roundCards[LeadingPlayerId]?.Suit;
 
-        public void Start() //start server
+        public bool Start() //start server
         {
-            if (_active) return;
+            if (_active) return false;
 
             Console.WriteLine("Starting game...");
 
-            if (!_server.Start()) return;
+            if (!Server.Start()) return false;
             
-            _server.ClientConnected += OnClientConnected;
-            _server.ClientDisconnected += OnClientDisconnected;
+            Server.ClientConnected += OnClientConnected;
+            Server.ClientDisconnected += OnClientDisconnected;
 
             NewGame();
 
             Console.WriteLine("Game ready");
 
             _active = true;
+            return true;
+        }
+
+        public bool Stop()
+        {
+            if (!_active) return false;
+            Console.WriteLine("Stopping...");
+            Server.Stop();
+            _active = false;
+            Console.WriteLine("Stopped");
+            return true;
         }
 
         public void NewGame()
@@ -76,7 +90,7 @@ namespace CardGameServer
             Round = 0;
             TurnIndex = 0;
             LeadingPlayerId = 0;
-            if (_server.ConnectedPlayerCount > 0) PromptCurrentPlayer();
+            if (Server.ConnectedPlayerCount > 0) PromptCurrentPlayer();
         }
         
 
@@ -108,10 +122,7 @@ namespace CardGameServer
             }
         }
 
-        private void PromptCurrentPlayer()
-        {
-            _players[TurnIndex].PromptTurn();
-        }
+        private void PromptCurrentPlayer() => _players[TurnIndex].PromptTurn();
 
         private void OnPlayingCard(object sender, PlayerPlayCardEventArgs e)
         {
@@ -127,22 +138,23 @@ namespace CardGameServer
             // Round of play
             int playRound = Round;
 
-            _pool[e.Player.Id] = e.Card;
+            // Put card on table
+            _roundCards[e.Player.Id] = e.Card;
 
-            if (_pool.All(c => c != null))
+            if (_roundCards.All(c => c != null))
             {
                 // Suit of leading player's card
-                var leadingSuit = _pool[LeadingPlayerId].Value.Suit;
+                var leadingSuit = _roundCards[LeadingPlayerId].Value.Suit;
                 // Highest card rank found in round pool
-                var highestRank = _pool[LeadingPlayerId].Value.Rank;
+                var highestRank = _roundCards[LeadingPlayerId].Value.Rank;
 
                 // Find winning card
-                for (int i = 0; i < _pool.Length; i++)
+                for (int i = 0; i < _roundCards.Length; i++)
                 {
-                    if (_pool[i].Value.Suit == leadingSuit && _pool[i].Value.Rank > highestRank)
+                    if (_roundCards[i].Value.Suit == leadingSuit && _roundCards[i].Value.Rank > highestRank)
                     {
                         winningId = i;
-                        highestRank = _pool[i].Value.Rank;
+                        highestRank = _roundCards[i].Value.Rank;
                     }
                 }
 
@@ -150,13 +162,11 @@ namespace CardGameServer
                 int winningScore = ++_players[winningId].Score;
 
                 // Empty pool
-                for (int i = 0; i < _pool.Length; i++)
-                {
-                    _pool[i] = null;
-                }
+                for (int i = 0; i < _roundCards.Length; i++) _roundCards[i] = null;
 
                 Console.WriteLine($"Player {winningId + 1} won round {Round}");
 
+                // Create player_score packet with updated score
                 var msgPlayerScore = new
                 {
                     msg_type = "player_score",
@@ -164,7 +174,8 @@ namespace CardGameServer
                     score = winningScore
                 };
 
-                _server.SendAll(msgPlayerScore);
+                // Send score update to all players
+                Server.SendAll(msgPlayerScore);
 
                 Round++;
                 LeadingPlayerId = winningId;
@@ -175,7 +186,7 @@ namespace CardGameServer
                 NextTurn();
             }
 
-            // Notify players of play and result
+            // Construct client_move packet
             var msgPlayCard = new
             {
                 msg_type = "client_move",
@@ -187,13 +198,12 @@ namespace CardGameServer
                 result_type = winningId
             };
 
-            _server.SendAll(msgPlayCard);
+            // Send client_move to all players
+            Server.SendAll(msgPlayCard);
+            
             PromptCurrentPlayer();
         }
 
-        private void NextTurn()
-        {
-            TurnIndex = (TurnIndex + 1) % MaxPlayers;
-        }
+        private void NextTurn() => TurnIndex = (TurnIndex + 1) % MaxPlayers;
     }
 }

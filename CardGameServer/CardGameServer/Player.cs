@@ -73,9 +73,11 @@ namespace CardGameServer
         public async void PromptTurn()
         {
             // Where player is autonomous, have them automatically select and play a card
-            if (Client == null)
+            if (Client == null && _game.Settings.AutoPlayEnabled)
             {
-                await Task.Delay(1500);
+                if (!_game.Settings.AutoPlayAllBotsEnabled && _game.Server.ConnectedPlayerCount == 0) return;
+
+                await Task.Delay(_game.Settings.AutoPlayDelay);
                 if (_game.LeadingPlayerId == Id || _game.LeadingSuit == null)
                 {
                     PlayCard(_rng.Next(_hand.Count));
@@ -98,6 +100,7 @@ namespace CardGameServer
             if (!e.Cancel)
             {
                 _hand.RemoveAt(cardIndex);
+                SendClientInfo();
                 return true;
             }
             return false;

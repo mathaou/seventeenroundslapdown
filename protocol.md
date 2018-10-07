@@ -60,7 +60,9 @@ Sent to each client when they join an active session.
 ```json
 {
     "msg_type": "game_state",
-    "round": 12,
+    "round": 12, // 1-based
+    // playing = game in progress
+    // ended = game has ended
     "game_state": "playing",
     "players": {
         "0": {
@@ -73,8 +75,11 @@ Sent to each client when they join an active session.
             "hand_size": 12,
             "points": 8
         }
-    }
-    "player_turn": 0
+    },
+    "turn": 0,
+    // Current cards on the table-- 0 = no card for player
+    // Indices correspond to player indices
+    "table": [0, 0, 0]
 }
 ```
 
