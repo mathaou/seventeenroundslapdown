@@ -10,20 +10,21 @@ namespace CardGameServer
 {
     public sealed class GameServer
     {
-        private const int ServerPort = 6789; //always 6789
+        private const int ServerPort = 6789;
 
         private readonly TcpListener _server;
         private readonly HashSet<PlayerClient> _clients;
         private readonly Thread _acceptClientsThread;
         private readonly object _startStopSync = new object();
-
+        private readonly Game _game;
         private bool _active;
 
         public event EventHandler<ClientConnectedEventArgs> ClientConnected;
         public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
 
-        public GameServer()
+        public GameServer(Game g)
         {
+            _game = g;
             ClientMessage.Init();
             _server = new TcpListener(IPAddress.Any, ServerPort);
             _clients = new HashSet<PlayerClient>();
@@ -49,7 +50,6 @@ namespace CardGameServer
                 }
                 catch (Exception ex)
                 {
-                    // TODO: Handle failed start
                     Console.WriteLine($"Exception occured on server start:\n{ex}");
                     return false;
                 }
@@ -103,6 +103,19 @@ namespace CardGameServer
                 {
                     var client = _server.AcceptTcpClient();
                     var playerClient = new PlayerClient(client);
+
+                    if (ConnectedPlayerCount >= _game.MaxPlayers)
+                    {
+                        var msgReject = new
+                        {
+                            msg_type = "client_reject",
+                            reject_reason = "server_full"
+                        };
+                        playerClient.Send(msgReject);
+                        playerClient.Stop();
+                        continue;
+                    }
+
                     playerClient.Disconnected += OnClientDisconnected;
                     ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
                     playerClient.Start();

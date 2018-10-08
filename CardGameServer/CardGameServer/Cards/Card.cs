@@ -54,5 +54,57 @@ namespace CardGameServer.Cards
 
             return pile;
         }
+
+        public void Print(bool dark = false, bool highlight = false)
+        {
+            Console.BackgroundColor = highlight ? ConsoleColor.Yellow : dark ? ConsoleColor.Gray : ConsoleColor.White;
+            Console.ForegroundColor = Suit == CardSuit.Hearts || Suit == CardSuit.Diamonds ? ConsoleColor.Red : ConsoleColor.Black;
+            switch (Rank)
+            {
+                case CardRank.Two:
+                case CardRank.Three:
+                case CardRank.Four:
+                case CardRank.Five:
+                case CardRank.Six:
+                case CardRank.Seven:
+                case CardRank.Eight:
+                case CardRank.Nine:
+                    Console.Write((int)Rank);
+                    break;
+                case CardRank.Ten:
+                    Console.Write('X');
+                    break;
+                case CardRank.Ace:
+                    Console.Write('A');
+                    break;
+                case CardRank.Jack:
+                    Console.Write('J');
+                    break;
+                case CardRank.Queen:
+                    Console.Write('Q');
+                    break;
+                case CardRank.King:
+                    Console.Write('K');
+                    break;
+            }
+
+            switch (Suit)
+            {
+                case CardSuit.Clubs:
+                    Console.Write('♣');
+                    break;
+                case CardSuit.Diamonds:
+                    Console.Write('♦');
+                    break;
+                case CardSuit.Hearts:
+                    Console.Write('♥');
+                    break;
+                case CardSuit.Spades:
+                    Console.Write('♠');
+                    break;
+            }
+
+            Console.ResetColor();
+        }
     }
 }

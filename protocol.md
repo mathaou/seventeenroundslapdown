@@ -178,3 +178,12 @@ Sent when a player plays a card from their hand.
 }
 ```
 
+### vote_new_game
+
+Sent when, at game-over state, a player requests to start a new game.
+
+```json
+{
+    "msg_type": "vote_new_game"
+}
+```

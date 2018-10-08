@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace CardGameServer
 {
@@ -11,17 +12,16 @@ namespace CardGameServer
         private bool _active = false;
         private readonly Random _rng;
         private readonly Card?[] _roundCards;
-
         private const int RoundCount = 17;
 
         public Game(GameSettings settings) //initiate game server and list of players
         {
             Settings = settings;
             _rng = new Random();
-            Server = new GameServer();
+            Server = new GameServer(this);
             _players = new List<Player>();
             _roundCards = new Card?[settings.MaxPlayers];
-            for(int i = 0; i < MaxPlayers; i++)
+            for (int i = 0; i < MaxPlayers; i++)
             {
                 var p = new Player(this, i);
                 p.PlayingCard += OnPlayingCard;
@@ -30,6 +30,8 @@ namespace CardGameServer
         }
 
         public int MaxPlayers => Settings.MaxPlayers;
+
+        public bool GameOver { get; private set; }
 
         public GameServer Server { get; }
 
@@ -52,13 +54,11 @@ namespace CardGameServer
             Console.WriteLine("Starting game...");
 
             if (!Server.Start()) return false;
-            
+
             Server.ClientConnected += OnClientConnected;
             Server.ClientDisconnected += OnClientDisconnected;
 
             NewGame();
-
-            Console.WriteLine("Game ready");
 
             _active = true;
             return true;
@@ -80,21 +80,29 @@ namespace CardGameServer
             var deck = Card.GeneratePile(_rng, Settings.NumDecks);
             int handSize = RoundCount;
 
+            Console.WriteLine("==== NEW GAME ====\n");
+
             // Set up players and deal cards
-            foreach(var player in _players)
+            foreach (var player in _players)
             {
-                player.Score = 0;
+                player.ScoreWins = 0;
+                player.ScorePoints = 0;
                 player.ClearHand();
                 player.AddToHand(deck.GetRange(handSize * player.Id, handSize));
-                Console.WriteLine($"Player {player.Id + 1} hand: {player.GetCards().Select(c => c.ToString()).Aggregate((c, n) => $"{c}, {n}")}\n");
+                // Print hand
+                Console.Write($"{player} <- ");
+                player.PrintHand(-1);
+                Console.Write("\n\n");
             }
 
+            GameOver = false;
             Round = 1;
             TurnIndex = 0;
             LeadingPlayerId = 0;
-            if (Server.ConnectedPlayerCount > 0) PromptCurrentPlayer();
+            OnRoundStart();
+            if (Server.ConnectedPlayerCount > 0 || Settings.AutoPlayFirstMove) PromptCurrentPlayer();
         }
-        
+
 
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
@@ -102,7 +110,7 @@ namespace CardGameServer
             {
                 if (player.Client == e.Client)
                 {
-                    Console.WriteLine($"Player {player.Id + 1} has disconnected ({e.DisconnectReason})");
+                    Console.WriteLine($"{player} has disconnected ({e.DisconnectReason})");
                     player.Client = null;
                     break;
                 }
@@ -112,12 +120,12 @@ namespace CardGameServer
         private void OnClientConnected(object sender, ClientConnectedEventArgs e)
         {
             // Add client to slot
-            foreach(var player in _players)
+            foreach (var player in _players)
             {
                 if (player.Client == null)
                 {
                     player.Client = e.Client;
-                    Console.WriteLine($"Player {player.Id + 1} has joined the game");
+                    Console.WriteLine($"{player} connected");
                     player.SendClientInfo();
                     player.Client.Send(GetGameState());
                     break;
@@ -129,14 +137,14 @@ namespace CardGameServer
         {
             msg_type = "game_state",
             round = Round,
-            game_state = "playing", // TODO: Update this with different game states
+            game_state = GameOver ? "ended": "playing",
             players = _players.ToDictionary(
-                p => p.Id.ToString(), 
+                p => p.Id.ToString(),
                 p => new
                 {
                     name = $"Player {p.Id}",
                     hand_size = p.HandCount,
-                    points = p.Score
+                    points = p.ScoreWins
                 }),
             turn = TurnIndex,
             table = _roundCards.Select(c => c == null ? 0 : c.Value.GetCardCode()).ToArray()
@@ -177,14 +185,16 @@ namespace CardGameServer
                         highestRank = _roundCards[i].Value.Rank;
                     }
                 }
+                var roundWinner = _players[winningId];
 
                 // Update score for round winner
-                int winningScore = ++_players[winningId].Score;
+                int winningScore = ++roundWinner.ScoreWins;
+                roundWinner.ScorePoints += (int)highestRank;
 
                 // Empty pool
                 for (int i = 0; i < _roundCards.Length; i++) _roundCards[i] = null;
 
-                Console.WriteLine($"Player {winningId + 1} won round {Round}");
+                Console.WriteLine($"{_players[winningId]} wins round {Round}");
 
                 // Create player_score packet with updated score
                 var msgPlayerScore = new
@@ -197,9 +207,20 @@ namespace CardGameServer
                 // Send score update to all players
                 Server.SendAll(msgPlayerScore);
 
-                Round++;
-                LeadingPlayerId = winningId;
-                TurnIndex = LeadingPlayerId;                
+                if (Round < RoundCount)
+                {
+                    Console.WriteLine($"Scores: {_players.OrderByDescending(p => p.ScoreWins).Select(p => $"{p} ({p.ScoreWins})").Aggregate((c, n) => $"{c}, {n}")}\n");
+                    Round++;
+                    LeadingPlayerId = winningId;
+                    TurnIndex = LeadingPlayerId;
+                    OnRoundStart();
+                }
+                else
+                {
+                    LeadingPlayerId = 0;
+                    TurnIndex = -1;
+                    GameOver = true;
+                }
             }
             else
             {
@@ -220,8 +241,65 @@ namespace CardGameServer
 
             // Send client_move to all players
             Server.SendAll(msgPlayCard);
-            
-            PromptCurrentPlayer();
+
+            if (GameOver)
+            {
+                OnGameEnd();
+            }
+            else
+            {
+                PromptCurrentPlayer();
+            }
+        }
+
+        private async void OnGameEnd()
+        {
+            // TODO: Send game over status
+            var scoreboard = _players.OrderByDescending(p => p.ScoreWins).ThenByDescending(p => p.ScorePoints).ToArray();
+            int winners = 1;
+            var winner = scoreboard[0];
+            for(int i = 1; i < scoreboard.Length; i++)
+            {
+                var p = scoreboard[i];
+                if (p.ScoreWins < winner.ScoreWins) break;
+                if (p.ScorePoints < winner.ScorePoints) break;
+                winners++;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("==== GAME OVER ====\n");
+
+            if (winners == 1)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"{winner} wins!");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"Game ends in {winners}-way tie!");
+            }
+            Console.ResetColor();
+            Console.WriteLine();
+
+            Console.WriteLine("Final Scores:");
+            for(int i = 0; i < scoreboard.Length; i++)
+            {
+                if (i < winners) Console.ForegroundColor = ConsoleColor.Yellow;
+                var p = scoreboard[i];
+                Console.WriteLine($"  - P{p.Id + 1}: {p.ScoreWins,8} wins{p.ScorePoints,8} pts");
+                Console.ResetColor();
+            }
+            Console.WriteLine();
+            Console.WriteLine($"Starting new round in {Settings.NewGameDelay / 1000}s...");
+            await Task.Delay(Settings.NewGameDelay);
+            Console.WriteLine();
+            NewGame();
+        }
+
+        private void OnRoundStart()
+        {
+            Console.WriteLine($"Round {Round} -- {_players[LeadingPlayerId]} leads");
         }
 
         private void NextTurn() => TurnIndex = (TurnIndex + 1) % MaxPlayers;

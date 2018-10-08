@@ -26,10 +26,16 @@ namespace CardGameServer
             _rng = game.RNG;
         }
 
+        // ID of player for network use
         public int Id { get; }
 
-        public int Score { get; set; }
+        // Number of rounds won
+        public int ScoreWins { get; set; }
 
+        // Number of points gained
+        public int ScorePoints { get; set; }
+
+        // Get current hand
         public IEnumerable<Card> GetCards()
         {
             foreach (var card in _hand) yield return card;
@@ -37,6 +43,7 @@ namespace CardGameServer
 
         public event EventHandler<PlayerPlayCardEventArgs> PlayingCard;
 
+        // Network client for player
         public PlayerClient Client
         {
             get => _client;
@@ -60,7 +67,6 @@ namespace CardGameServer
 
         private void OnClientMessageReceived(object sender, ClientMessageEventArgs e)
         {
-            Console.WriteLine($"Player {Id + 1} message: {e.MessageType}");
             ClientMessage.Run(_game, this, e);
         }
 
@@ -86,7 +92,37 @@ namespace CardGameServer
                 else
                 {
                     var matchingSuitCards = _hand.Select((c, i) => (c, i)).Where(t => t.c.Suit == _game.LeadingSuit).ToArray();
-                    PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[_rng.Next(matchingSuitCards.Length)].i : _rng.Next(_hand.Count));
+                    int minIndex = 0, maxIndex = 0;
+                    CardRank minRank = CardRank.Two, maxRank = CardRank.Two;
+                    for (int i = 0; i < matchingSuitCards.Length; i++)
+                    {
+                        Card c = matchingSuitCards[i].c;
+                        if (c.Rank < minRank)
+                        {
+                            minIndex = i;
+                            minRank = c.Rank;
+                        }
+                        if (c.Rank > maxRank)
+                        {
+                            maxIndex = i;
+                            maxRank = c.Rank;
+                        }
+                    }
+
+                    switch (_game.Settings.Difficulty)
+                    {
+                        case 1:
+                            PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[minIndex].i : _rng.Next(_hand.Count));
+                            break;
+                        case 2:
+                        default:
+                            PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[_rng.Next(matchingSuitCards.Length)].i : _rng.Next(_hand.Count));
+                            break;
+                        case 3:
+                            PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[maxIndex].i : _rng.Next(_hand.Count));
+                            break;
+                    }
+
                 }
             }
         }
@@ -96,7 +132,15 @@ namespace CardGameServer
             if (cardIndex < 0 || cardIndex >= HandCount) return false;
             var card = _hand[cardIndex];
             var e = new PlayerPlayCardEventArgs(this, card);
-            Console.WriteLine($"Player {Id + 1} playing {card} (i = {cardIndex})");
+            if (!IsAutonomous) Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"P{Id + 1}");
+            Console.ResetColor();
+            Console.Write($": ");
+            PrintHand(cardIndex);
+            Console.Write($" -> ");
+            card.Print();
+            //Console.Write($" (#{cardIndex})");
+            Console.WriteLine();
             PlayingCard?.Invoke(this, e);
             if (!e.Cancel)
             {
@@ -121,8 +165,21 @@ namespace CardGameServer
 
         public void ClearHand() => _hand.Clear();
 
+        public Card GetCard(int i) => _hand[i];
+
         public void AddToHand(IEnumerable<Card> cards) => _hand.AddRange(cards);
 
         public int HandCount => _hand.Count;
+
+        public void PrintHand(int highlight = -1)
+        {
+            for (int i = 0; i < HandCount; i++)
+            {
+                GetCard(i).Print(i % 2 == 0, i == highlight);
+            }
+            Console.ResetColor();
+        }
+
+        public override string ToString() => $"P{Id + 1}";
     }
 }

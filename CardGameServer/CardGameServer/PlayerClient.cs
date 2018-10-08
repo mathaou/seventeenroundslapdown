@@ -117,7 +117,7 @@ namespace CardGameServer
                     }
                     catch (JsonReaderException ex)
                     {
-                        Console.WriteLine($"Received sketchy data from {_clientId} ({ex.Message})");
+                        Console.WriteLine($"Received bad JSON from {_clientId} ({ex.Message})");
                     }
                 }
                 catch (SocketException ex)
@@ -141,8 +141,7 @@ namespace CardGameServer
                 catch (Exception ex)
                 {
                     // Log misc errors
-                    Console.WriteLine($"Exception occured in @PlayerClient.Listen():\n{ex}");
-
+                    Console.WriteLine($"Exception occurred in PlayerClient.Listen():\n{ex}");
                 }
                 finally
                 {

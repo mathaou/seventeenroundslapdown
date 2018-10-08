@@ -31,6 +31,14 @@ namespace CardGameServer
         [DefaultValue(true)]
         public bool AutoPlayAllBotsEnabled { get; set; } = true;
 
+        [JsonProperty("auto_play_first_move", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public bool AutoPlayFirstMove { get; set; } = false;
+
+        [JsonProperty("difficulty", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(2)]
+        public int Difficulty { get; set; } = 2;
+
         public static GameSettings Load(string path)
         {
             return JsonConvert.DeserializeObject<GameSettings>(File.ReadAllText(path));
