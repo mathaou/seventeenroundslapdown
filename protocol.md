@@ -4,7 +4,8 @@ This document outlines the protocol for the card game server and client.
 
 ## Packet structure
 
-A single TCP server is opened on port 6789. Packet payload is a JSON object encoded as a UTF-8 string.
+A single TCP server is opened on port 6789. 
+Packet payload is a single JSON object encoded as a UTF-8 string.
 
 ## Card IDs
 
@@ -55,7 +56,8 @@ If they connect during a game, they are provided the hand of the computer-driven
 
 ### game_state
 
-Sent to each client when they join an active session.
+Contains all information about the current game state and can be sent
+to any client at any time.
 
 ```json
 {
@@ -77,7 +79,7 @@ Sent to each client when they join an active session.
         }
     },
     "turn": 0,
-    // Current cards on the table-- 0 = no card for player
+    // Current cards on the table. 0 = no card for player
     // Indices correspond to player indices
     "table": [0, 0, 0]
 }
@@ -115,21 +117,6 @@ Informs the client of the cards available in their hand.
 }
 ```
 
-### game_start
-
-Sent when the server starts the game. Each client is assigned a player ID,
-hand, and some basic information on other players. The packet each client receives only contains information on their own hand.
-
-```json
-{
-    "msg_type": "game_start",
-    "client_info": {
-        "player_index": 1, // Client becomes Player 2
-        "hand": [ ... ], // Array of card IDs
-    }
-}
-```
-
 ### client_move
 
 Sent when any player plays a card. Contains information about the player
@@ -161,6 +148,50 @@ Sent when a score for a player has been updated.
     "msg_type": "player_score",
     "player_index": 1, // Player 2
     "score": 3 // 3 points
+}
+```
+
+### game_end
+
+Sent when the game has ended and winner(s) have been chosen.
+
+```json
+{
+    "msg_type": "game_end",
+    // # of players tied for first
+    "winner_count": 1,
+    // Scoreboard sorted in descending order of wins, then points
+    "scoreboard": [
+        {
+            "id": 2,
+            "wins": 7,
+            "points": 85
+        },
+        {
+            "id": 1,
+            "wins": 7,
+            "points": 78
+        },
+        {
+            "id": 3,
+            "wins": 3,
+            "points": 30
+        }
+    ],
+    // # of ms until new game
+    "delay_ms": 15000
+}
+```
+
+### new_game_votes
+
+Sent when any player votes to start a new game and contains information
+about which players have voted so far.
+
+```json
+{
+    "msg_type": "new_game_votes",
+    "vote_state": [true, false, true] // P1 and P3 have voted; P2 has not
 }
 ```
 

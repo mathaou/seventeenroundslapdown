@@ -2,9 +2,10 @@
 	"max_players": 3,
 	"num_decks": 1,
 	"new_game_delay_ms": 15000,
-	"auto_play_delay_ms": 1500,
+	"auto_play_delay_ms": 200,
 	"auto_play_enabled": true,
-	"auto_play_all_bots": true,
-	"auto_play_first_move": true,
-	"difficulty": 3
+	"auto_play_all_bots": false,
+	"auto_play_first_move": false,
+	"difficulty": 2,
+	"slapdown_bonus": 20
 }

@@ -35,6 +35,9 @@ namespace CardGameServer
         // Number of points gained
         public int ScorePoints { get; set; }
 
+        // Is ready for next game
+        public bool IsReady { get; set; }
+
         // Get current hand
         public IEnumerable<Card> GetCards()
         {

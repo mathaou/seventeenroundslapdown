@@ -39,6 +39,10 @@ namespace CardGameServer
         [DefaultValue(2)]
         public int Difficulty { get; set; } = 2;
 
+        [JsonProperty("slapdown_bonus", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(10)]
+        public int SlapdownBonus { get; set; } = 10;
+
         public static GameSettings Load(string path)
         {
             return JsonConvert.DeserializeObject<GameSettings>(File.ReadAllText(path));

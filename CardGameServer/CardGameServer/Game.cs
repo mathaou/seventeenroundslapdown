@@ -85,6 +85,7 @@ namespace CardGameServer
             // Set up players and deal cards
             foreach (var player in _players)
             {
+                player.IsReady = false;
                 player.ScoreWins = 0;
                 player.ScorePoints = 0;
                 player.ClearHand();
@@ -93,6 +94,14 @@ namespace CardGameServer
                 Console.Write($"{player} <- ");
                 player.PrintHand(-1);
                 Console.Write("\n\n");
+            }
+
+            var state = GetGameState();
+
+            foreach (var player in _players)
+            {
+                player.SendClientInfo();
+                player.Client?.Send(state);
             }
 
             GameOver = false;
@@ -131,13 +140,14 @@ namespace CardGameServer
                     break;
                 }
             }
+            PromptCurrentPlayer();
         }
 
         public object GetGameState() => new
         {
             msg_type = "game_state",
             round = Round,
-            game_state = GameOver ? "ended": "playing",
+            game_state = GameOver ? "ended" : "playing",
             players = _players.ToDictionary(
                 p => p.Id.ToString(),
                 p => new
@@ -166,6 +176,8 @@ namespace CardGameServer
             // Round of play
             int playRound = Round;
 
+            bool slapdown = false;
+
             // Put card on table
             _roundCards[e.Player.Id] = e.Card;
 
@@ -174,25 +186,50 @@ namespace CardGameServer
                 // Suit of leading player's card
                 var leadingSuit = _roundCards[LeadingPlayerId].Value.Suit;
                 // Highest card rank found in round pool
-                var highestRank = _roundCards[LeadingPlayerId].Value.Rank;
+                var highestSuitRank = _roundCards[LeadingPlayerId].Value.Rank;
+                var lowestAnyRank = highestSuitRank;
+                // Number of valid cards played in round
+                int numValidCards = 0;
 
                 // Find winning card
                 for (int i = 0; i < _roundCards.Length; i++)
                 {
-                    if (_roundCards[i].Value.Suit == leadingSuit && _roundCards[i].Value.Rank > highestRank)
+                    var card = _roundCards[i].Value;
+                    // If the play matches the suit, count as a valid play
+                    if (card.Suit == leadingSuit)
                     {
-                        winningId = i;
-                        highestRank = _roundCards[i].Value.Rank;
+                        numValidCards++;
+                        if (card.Rank > highestSuitRank)
+                        {
+                            winningId = i;
+                            highestSuitRank = card.Rank;
+                        }
+                    }
+
+                    // Record max overall rank
+                    if (card.Rank < lowestAnyRank)
+                    {
+                        lowestAnyRank = card.Rank;
                     }
                 }
                 var roundWinner = _players[winningId];
 
-                // Update score for round winner
-                int winningScore = ++roundWinner.ScoreWins;
-                roundWinner.ScorePoints += (int)highestRank;
-
                 // Empty pool
                 for (int i = 0; i < _roundCards.Length; i++) _roundCards[i] = null;
+
+                // Update score for round winner
+                int winningScore = ++roundWinner.ScoreWins;
+                roundWinner.ScorePoints += (int)highestSuitRank;
+
+                // Award slapdown bonus if nobody matched leading suit and the leading card has the lowest rank
+                if (slapdown = numValidCards == 1 && highestSuitRank == lowestAnyRank)
+                {
+                    roundWinner.ScorePoints += Settings.SlapdownBonus;
+                    Console.BackgroundColor = ConsoleColor.DarkRed;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine("<<<<< S L A P D O W N ! >>>>>");
+                    Console.ResetColor();
+                }
 
                 Console.WriteLine($"{_players[winningId]} wins round {Round}");
 
@@ -236,7 +273,8 @@ namespace CardGameServer
                 round = playRound,
                 next_round = Round,
                 next_turn = TurnIndex,
-                result_type = winningId
+                result_type = winningId,
+                slapdown = slapdown
             };
 
             // Send client_move to all players
@@ -252,18 +290,44 @@ namespace CardGameServer
             }
         }
 
+        private object CreateGameEndPacket(int winners)
+        {
+            return new
+            {
+                msg_type = "game_end",
+                winner_count = winners,
+                scoreboard = _players
+                .OrderByDescending(p => p.ScoreWins)
+                .ThenByDescending(p => p.ScorePoints)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    wins = p.ScoreWins,
+                    points = p.ScorePoints
+                }).ToArray(),
+                delay_ms = Settings.NewGameDelay
+            };
+        }
+
         private async void OnGameEnd()
         {
-            // TODO: Send game over status
             var scoreboard = _players.OrderByDescending(p => p.ScoreWins).ThenByDescending(p => p.ScorePoints).ToArray();
             int winners = 1;
             var winner = scoreboard[0];
-            for(int i = 1; i < scoreboard.Length; i++)
+            for (int i = 1; i < scoreboard.Length; i++)
             {
                 var p = scoreboard[i];
                 if (p.ScoreWins < winner.ScoreWins) break;
                 if (p.ScorePoints < winner.ScorePoints) break;
                 winners++;
+            }
+
+            var msgGameEnd = CreateGameEndPacket(winners);
+
+            // Send game_end message to players
+            foreach (var player in _players)
+            {
+                player.Client?.Send(msgGameEnd);
             }
 
             Console.WriteLine();
@@ -283,7 +347,7 @@ namespace CardGameServer
             Console.WriteLine();
 
             Console.WriteLine("Final Scores:");
-            for(int i = 0; i < scoreboard.Length; i++)
+            for (int i = 0; i < scoreboard.Length; i++)
             {
                 if (i < winners) Console.ForegroundColor = ConsoleColor.Yellow;
                 var p = scoreboard[i];
@@ -292,9 +356,25 @@ namespace CardGameServer
             }
             Console.WriteLine();
             Console.WriteLine($"Starting new round in {Settings.NewGameDelay / 1000}s...");
-            await Task.Delay(Settings.NewGameDelay);
+            var voteTask = WaitForPlayerVotes();
+            await await Task.WhenAny(voteTask, Task.Delay(Settings.NewGameDelay).ContinueWith(_ => true));
             Console.WriteLine();
             NewGame();
+        }
+
+        private async Task<bool> WaitForPlayerVotes()
+        {
+            bool votesIn = false;
+
+            // Keep waiting until all players have voted
+            while (GameOver && (Server.ConnectedPlayerCount == 0 || !(votesIn = _players.Where(p => !p.IsAutonomous).All(p => p.IsReady))))
+            {
+                await Task.Delay(100);
+            }
+
+            if (votesIn) Console.WriteLine("Votes are in, starting new game");
+
+            return true;
         }
 
         private void OnRoundStart()
