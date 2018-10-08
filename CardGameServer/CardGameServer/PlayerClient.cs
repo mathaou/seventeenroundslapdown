@@ -75,6 +75,8 @@ namespace CardGameServer
             await _stream.WriteAsync(jsonStringBytes, 0, jsonStringBytes.Length);
         }
 
+        public void Send(object obj) => Send(JObject.FromObject(obj));
+
         public override string ToString() => _clientId;
 
         private void Listen()

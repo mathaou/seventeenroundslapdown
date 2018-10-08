@@ -12,6 +12,8 @@ namespace CardGameServer
         private readonly Random _rng;
         private readonly Card?[] _roundCards;
 
+        private const int RoundCount = 17;
+
         public Game(GameSettings settings) //initiate game server and list of players
         {
             Settings = settings;
@@ -31,7 +33,7 @@ namespace CardGameServer
 
         public GameServer Server { get; }
 
-        public int Round { get; set; }
+        public int Round { get; set; } = 1;
 
         public int TurnIndex { get; set; }
 
@@ -75,10 +77,10 @@ namespace CardGameServer
         public void NewGame()
         {
             // Generate deck
-            var deck = Card.GeneratePile(_rng);
-            int handSize = deck.Count / MaxPlayers;
+            var deck = Card.GeneratePile(_rng, Settings.NumDecks);
+            int handSize = RoundCount;
 
-            // Set up players
+            // Set up players and deal cards
             foreach(var player in _players)
             {
                 player.Score = 0;
@@ -87,7 +89,7 @@ namespace CardGameServer
                 Console.WriteLine($"Player {player.Id + 1} hand: {player.GetCards().Select(c => c.ToString()).Aggregate((c, n) => $"{c}, {n}")}\n");
             }
 
-            Round = 0;
+            Round = 1;
             TurnIndex = 0;
             LeadingPlayerId = 0;
             if (Server.ConnectedPlayerCount > 0) PromptCurrentPlayer();
@@ -117,10 +119,28 @@ namespace CardGameServer
                     player.Client = e.Client;
                     Console.WriteLine($"Player {player.Id + 1} has joined the game");
                     player.SendClientInfo();
+                    player.Client.Send(GetGameState());
                     break;
                 }
             }
         }
+
+        public object GetGameState() => new
+        {
+            msg_type = "game_state",
+            round = Round,
+            game_state = "playing", // TODO: Update this with different game states
+            players = _players.ToDictionary(
+                p => p.Id.ToString(), 
+                p => new
+                {
+                    name = $"Player {p.Id}",
+                    hand_size = p.HandCount,
+                    points = p.Score
+                }),
+            turn = TurnIndex,
+            table = _roundCards.Select(c => c == null ? 0 : c.Value.GetCardCode()).ToArray()
+        };
 
         private void PromptCurrentPlayer() => _players[TurnIndex].PromptTurn();
 

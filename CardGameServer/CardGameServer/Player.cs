@@ -60,6 +60,7 @@ namespace CardGameServer
 
         private void OnClientMessageReceived(object sender, ClientMessageEventArgs e)
         {
+            Console.WriteLine($"Player {Id + 1} message: {e.MessageType}");
             ClientMessage.Run(_game, this, e);
         }
 
