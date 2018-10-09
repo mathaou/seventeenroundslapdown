@@ -225,9 +225,8 @@ namespace CardGameServer
                 if (slapdown = numValidCards == 1 && highestSuitRank == lowestAnyRank)
                 {
                     roundWinner.ScorePoints += Settings.SlapdownBonus;
-                    Console.BackgroundColor = ConsoleColor.DarkRed;
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.WriteLine("<<<<< S L A P D O W N ! >>>>>");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"  Slapdown Bonus +{Settings.SlapdownBonus}");
                     Console.ResetColor();
                 }
 
@@ -238,7 +237,8 @@ namespace CardGameServer
                 {
                     msg_type = "player_score",
                     player_index = winningId,
-                    score = winningScore
+                    wins = roundWinner.ScoreWins,
+                    points = roundWinner.ScorePoints
                 };
 
                 // Send score update to all players

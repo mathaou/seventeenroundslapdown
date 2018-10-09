@@ -68,12 +68,10 @@ to any client at any time.
     "game_state": "playing",
     "players": {
         "0": {
-            "name": "Matt",
             "hand_size": 12,
             "points": 3
         },
         "1": {
-            "name": "Nick",
             "hand_size": 12,
             "points": 8
         }
@@ -147,7 +145,8 @@ Sent when a score for a player has been updated.
 {
     "msg_type": "player_score",
     "player_index": 1, // Player 2
-    "score": 3 // 3 points
+    "wins": 3,
+    "points": 34
 }
 ```
 
