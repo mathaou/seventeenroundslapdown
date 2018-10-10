@@ -19,6 +19,7 @@ import org.lwjgl.LWJGLException;
 import org.newdawn.slick.SlickException;
 
 import view.GameState;
+import view.ResultState;
 
 public class Player{
 	
@@ -46,7 +47,7 @@ public class Player{
 	
 	boolean gameStart = true, roundTurn = false;
 	
-	int round = 0;
+	int round = 1;
 	int currentPlayer = 0;
 	int win = 0;
 	int[] ps = new int[3];
@@ -130,7 +131,7 @@ public class Player{
 					}
 					if(sHand.getInt("result_type") > -1)
 						setWin(sHand.getInt("result_type"));
-					if(sHand.getInt("round") == sHand.getInt("next_round")) {
+					if(sHand.getInt("round") == sHand.getInt("next_round") && round != 16) {
 						roundTurn = true;
 					} else {
 						if(roundTurn && sHand.getInt("next_round") > sHand.getInt("round")) {
@@ -145,8 +146,13 @@ public class Player{
 					
 					break;
 			case "game_end":
+				JSONArray winner = sHand.getJSONArray("scoreboard");
+				ResultState.setWinningPlayer(winner.getJSONObject(0).getInt("id"));
+				ResultState.timer = 15;
 				GameState.gameEnd = true;
 				gameStart = true;
+				win = 0;
+				round = 1;
 				break;
 			case "client_info":
 				playerIndex = sHand.getInt("player_id");
@@ -157,6 +163,7 @@ public class Player{
 				break;
 			case "game_state":
 				setRound(sHand.getInt("round"));
+				GameState.gameEnd = false;
 				break;
 			}
 			displayBytes = "";
@@ -196,10 +203,8 @@ public class Player{
 	public void fillHand(String hand) throws SlickException, LWJGLException {
 		this.hand.clear();
 		try {
-			//System.out.println(hand);
 			JSONObject sHand = new JSONObject(hand);
 			for(int i = 0; i <sHand.getJSONArray("cards").length(); i++) {
-				//System.out.println(buildFileName(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
 				if(GameState.gameEnd) {
 					this.hand.set(i, new Card(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
 				} else {
@@ -207,11 +212,6 @@ public class Player{
 				}
 			}
 			currentPlayer = 0;
-			for(int i = 0; i < ps.length; i++) {
-				ps[i] = 0;
-				playedCards[i] = -1;
-				pp[i] = 0;
-			}
 			win = 0;
 			round = 1;
 			gameStart = false;

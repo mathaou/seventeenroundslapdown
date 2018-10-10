@@ -1,5 +1,9 @@
 package control;
 
+import java.util.regex.Pattern;
+
+import javax.swing.JOptionPane;
+
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.state.StateBasedGame;

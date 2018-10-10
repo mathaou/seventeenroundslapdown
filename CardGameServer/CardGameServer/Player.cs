@@ -94,7 +94,8 @@ namespace CardGameServer
                 }
                 else
                 {
-                    var matchingSuitCards = _hand.Select((c, i) => (c, i)).Where(t => t.c.Suit == _game.LeadingSuit).ToArray();
+                    var matchingSuitCards = _hand.Select((c, i) => (c, i))
+                        .Where(t => t.c.Suit == _game.LeadingSuit).ToArray();
                     int minIndex = 0, maxIndex = 0;
                     CardRank minRank = CardRank.Two, maxRank = CardRank.Two;
                     for (int i = 0; i < matchingSuitCards.Length; i++)

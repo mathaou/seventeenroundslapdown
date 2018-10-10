@@ -66,7 +66,7 @@ public class GameState extends BasicGameState{
 	@Override
 	public void init(GameContainer gc, StateBasedGame arg1) throws SlickException {
 		
-		//wolf = new Music("/res/WOLF.wav");
+		//wolf = new Music("res/WOLF.wav");
 		
 		try {
 			hind = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/hind/hind-bold.ttf"));
@@ -95,15 +95,14 @@ public class GameState extends BasicGameState{
 		
 		gc.setSoundVolume(50f);
 		
-		String IPADDRESS_PATTERN = 
-				"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
-		
 		try {
 			boolean loop = false;
 			String ip = "";
+			String IPADDRESS_PATTERN = 
+					"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+					"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+					"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
+					"([01]?\\d\\d?|2[0-4]\\d|25[0-5])$";
 			while(!loop) {
 				ip = JOptionPane.showInputDialog("Enter your IP address...");
 				if(Pattern.compile(IPADDRESS_PATTERN).matcher(ip).matches()) {
@@ -113,6 +112,7 @@ public class GameState extends BasicGameState{
 				}
 			}
 			p1 = new Player(0, InetAddress.getByName(ip), PORT_NUM);
+			gc.setFullscreen(true);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -162,8 +162,13 @@ public class GameState extends BasicGameState{
 		mouseY = Mouse.getY();
 		
 		if(gameEnd) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 			arg1.enterState(control.StateBasedRunner.RESULT);
-			ResultState.setWinningPlayer(p1.getWin());
+			p1.setRound(1);
 			gameEnd = false;
 		}
 	}
@@ -310,7 +315,11 @@ public class GameState extends BasicGameState{
 		
 		g.setFont(ttfH);
 		
-		g.drawString("Round: "+ (p1.getRound() + 1) + "", gc.getWidth()-200, 50f);
+		if(p1.getRound() == 1 && p1.getHand().size() == 17) {
+			g.drawString("Round: "+ (p1.getRound()) + "", gc.getWidth()-200, 50f);
+		} else { 
+			g.drawString("Round: "+ (p1.getRound() + 1) + "", gc.getWidth()-200, 50f);
+		}
 		
 		for(int i = 0; i < p1.getPs().length; i++) {
 			g.drawString( "P"+ (i + 1), (400* (i + 1)), gc.getHeight() - 600);
@@ -336,8 +345,6 @@ public class GameState extends BasicGameState{
 	}
 
 	public void drawFace(int s, int index, Image i) {
-		//System.out.println("X: "+(mouseX - (index * cardWidth)));
-		//System.out.println(up);
 		float up = (float) ((1f / (
 				Math.abs(mouseX - (index * cardWidth)) * .04f + 1f
 				)) * 75);
@@ -348,12 +355,7 @@ public class GameState extends BasicGameState{
 			} else {
 				back.draw(index * cardWidth, offsetY - up); i.draw(index * cardWidth, offsetY - up); break;
 			}
-		//case 1: i.draw(index * cardWidth, offsetY); break;
 		}
-	}
-	
-	public void drawServerData(GameContainer gc, Graphics g) {
-		
 	}
 	
 	public static void playSong() {
