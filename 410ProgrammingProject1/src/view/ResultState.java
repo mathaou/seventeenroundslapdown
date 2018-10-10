@@ -21,6 +21,9 @@ public class ResultState extends BasicGameState{
 	
 	public TrueTypeFont ttfH;
 	
+	int countDown = 0;
+	public static int timer;
+	
 	@Override
 	public void init(GameContainer arg0, StateBasedGame arg1) throws SlickException {
 		try {
@@ -28,26 +31,39 @@ public class ResultState extends BasicGameState{
 		} catch (FontFormatException | IOException e) {
 			e.printStackTrace();
 		}
-		hind = hind.deriveFont(Font.BOLD, 20);
+		hind = hind.deriveFont(Font.BOLD, 40);
 		ttfH = new TrueTypeFont(hind, true);
 	}
 
 	@Override
 	public void render(GameContainer arg0, StateBasedGame arg1, Graphics arg2) throws SlickException {
 		arg2.setFont(ttfH);
-		if(winningPlayer > -1) {
-			arg2.drawString("P"+winningPlayer +" WINS", arg0.getWidth()/2, arg0.getHeight()/2);
-		}
+		arg2.drawString("P"+(winningPlayer + 1) +" WINS, " + timer + " seconds left...", arg0.getWidth()/2, arg0.getHeight()/2);
 		
-		for(int i = 0; i < GameState.getP1().getPp().length; i++) {
-			
+		for(int i = 0; i < GameState.getP1().getPs().length; i++) {
+			arg2.drawString("P"+ (i + 1), arg0.getWidth()/2 + (300 * i), arg0.getHeight()/2 + 40);
+			arg2.drawString("Wins: "+GameState.getP1().getPs()[i], arg0.getWidth()/2 + (150 * i), arg0.getHeight()/2 + 80);
+			arg2.drawString("Points: "+GameState.getP1().getPp()[i], arg0.getWidth()/2 + (150 * i), arg0.getHeight()/2 + 120);
 		}
 		
 	}
 
 	@Override
 	public void update(GameContainer arg0, StateBasedGame arg1, int arg2) throws SlickException {
-		if(arg0.getInput().isKeyPressed(Input.KEY_SPACE)) {
+		countDown += arg2;
+		if(countDown > 1200) {
+			countDown = 0;
+			if(timer > 0) {
+				timer--;
+			}
+		}
+		if(timer <= 0 && GameState.getP1().getRound() == 1) {
+			for(int i = 0; i < GameState.getP1().getPs().length; i++) {
+				GameState.getP1().getPs()[i] = 0;
+				GameState.getP1().getPlayedCards()[i] = -1;
+				GameState.getP1().getPp()[i] = 0;
+			}
+			
 			GameState.gameEnd = false;
 			arg1.enterState(control.StateBasedRunner.GAME);
 		}
