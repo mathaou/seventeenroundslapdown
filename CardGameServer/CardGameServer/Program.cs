@@ -13,8 +13,10 @@ namespace CardGameServer
 
         static void Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
             Console.Title = "17RSD Server";
             GameSettings settings;
+
             if (File.Exists(SettingsFilePath))
             {
                 settings = GameSettings.Load(SettingsFilePath);
@@ -25,15 +27,21 @@ namespace CardGameServer
                 settings = new GameSettings();
                 Console.WriteLine("No settings file found -- using defaults");
             }
+
             var game = new Game(settings);
             game.Start();
+
             Console.CancelKeyPress += (sender, e) =>
             {
                 game.Stop();
                 Environment.Exit(0);
             };
-            Console.ReadKey(true);
-            game.Stop();
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+            {   
+                game.Stop();
+            };
+
+            while(true) Console.ReadKey(true);
         }
     }
 }

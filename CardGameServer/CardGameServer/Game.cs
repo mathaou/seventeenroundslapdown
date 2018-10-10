@@ -13,6 +13,7 @@ namespace CardGameServer
         private readonly Random _rng;
         private readonly Card?[] _roundCards;
         private const int RoundCount = 17;
+        private readonly object _syncStartStop = new object();
 
         public Game(GameSettings settings) //initiate game server and list of players
         {
@@ -49,33 +50,43 @@ namespace CardGameServer
 
         public bool Start() //start server
         {
-            if (_active) return false;
+            lock(_syncStartStop)
+            {
+                if (_active) return false;
 
-            Console.WriteLine("Starting game...");
+                Console.WriteLine("Starting game...");
 
-            if (!Server.Start()) return false;
+                if (!Server.Start()) return false;
 
-            Server.ClientConnected += OnClientConnected;
-            Server.ClientDisconnected += OnClientDisconnected;
+                Server.ClientConnected += OnClientConnected;
 
-            NewGame();
+                NewGame();
 
-            _active = true;
-            return true;
+                _active = true;
+                return true;
+            }
         }
 
         public bool Stop()
         {
-            if (!_active) return false;
-            Console.WriteLine("Stopping...");
-            Server.Stop();
-            _active = false;
-            Console.WriteLine("Stopped");
-            return true;
+            lock(_syncStartStop)
+            {
+                if (!_active) return false;
+                Console.WriteLine("Stopping...");
+                Server.Stop();
+                _active = false;
+                Console.WriteLine("Stopped");
+                return true;
+            }
         }
 
         public void NewGame()
         {
+            GameOver = false;
+            Round = 1;
+            TurnIndex = 0;
+            LeadingPlayerId = 0;
+
             // Generate deck
             var deck = Card.GeneratePile(_rng, Settings.NumDecks);
             int handSize = RoundCount;
@@ -85,10 +96,7 @@ namespace CardGameServer
             // Set up players and deal cards
             foreach (var player in _players)
             {
-                player.IsReady = false;
-                player.ScoreWins = 0;
-                player.ScorePoints = 0;
-                player.ClearHand();
+                player.Reset();
                 player.AddToHand(deck.GetRange(handSize * player.Id, handSize));
                 // Print hand
                 Console.Write($"{player} <- ");
@@ -96,34 +104,17 @@ namespace CardGameServer
                 Console.Write("\n\n");
             }
 
-            var state = GetGameState();
+            var state = CreateGameStateMessage();
 
             foreach (var player in _players)
             {
                 player.SendClientInfo();
-                player.Client?.Send(state);
             }
 
-            GameOver = false;
-            Round = 1;
-            TurnIndex = 0;
-            LeadingPlayerId = 0;
+            Server.SendAll(state);
+            
             OnRoundStart();
             if (Server.ConnectedPlayerCount > 0 || Settings.AutoPlayFirstMove) PromptCurrentPlayer();
-        }
-
-
-        private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
-        {
-            foreach (var player in _players)
-            {
-                if (player.Client == e.Client)
-                {
-                    Console.WriteLine($"{player} has disconnected ({e.DisconnectReason})");
-                    player.Client = null;
-                    break;
-                }
-            }
         }
 
         private void OnClientConnected(object sender, ClientConnectedEventArgs e)
@@ -134,16 +125,16 @@ namespace CardGameServer
                 if (player.Client == null)
                 {
                     player.Client = e.Client;
-                    Console.WriteLine($"{player} connected");
                     player.SendClientInfo();
-                    player.Client.Send(GetGameState());
+                    player.Client.Send(CreateGameStateMessage());
+                    Console.WriteLine($"{player} connected");
                     break;
                 }
             }
             PromptCurrentPlayer();
         }
 
-        public object GetGameState() => new
+        public object CreateGameStateMessage() => new
         {
             msg_type = "game_state",
             round = Round,
@@ -226,7 +217,7 @@ namespace CardGameServer
                 {
                     roundWinner.ScorePoints += Settings.SlapdownBonus;
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"  Slapdown Bonus +{Settings.SlapdownBonus}");
+                    Console.WriteLine($">> Slapdown Bonus +{Settings.SlapdownBonus}");
                     Console.ResetColor();
                 }
 
@@ -290,7 +281,7 @@ namespace CardGameServer
             }
         }
 
-        private object CreateGameEndPacket(int winners)
+        private object CreateGameEndMessage(int winners)
         {
             return new
             {
@@ -322,7 +313,7 @@ namespace CardGameServer
                 winners++;
             }
 
-            var msgGameEnd = CreateGameEndPacket(winners);
+            var msgGameEnd = CreateGameEndMessage(winners);
 
             // Send game_end message to players
             foreach (var player in _players)

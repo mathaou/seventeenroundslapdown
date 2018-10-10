@@ -121,6 +121,13 @@ namespace CardGameServer
                     playerClient.Start();
                     _clients.Add(playerClient);
                 }
+                catch (SocketException ex)
+                {
+                    if (ex.SocketErrorCode == SocketError.Interrupted)
+                    {
+                        return;
+                    }
+                }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Exception occured on client sync:\n{ex}");

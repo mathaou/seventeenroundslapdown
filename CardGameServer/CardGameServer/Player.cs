@@ -4,7 +4,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CardGameServer
@@ -78,6 +77,7 @@ namespace CardGameServer
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
             Client = null;
+            Console.WriteLine($"{this} has disconnected ({e.DisconnectReason})");
         }
 
         public async void PromptTurn()
@@ -142,7 +142,6 @@ namespace CardGameServer
             PrintHand(cardIndex);
             Console.Write($" -> ");
             card.Print();
-            //Console.Write($" (#{cardIndex})");
             Console.WriteLine();
             PlayingCard?.Invoke(this, e);
             if (!e.Cancel)
@@ -180,7 +179,15 @@ namespace CardGameServer
             {
                 GetCard(i).Print(i % 2 == 0, i == highlight);
             }
-            Console.ResetColor();
+            Console.ResetColor();            
+        }
+
+        public void Reset()
+        {
+            IsReady = false;
+            ScoreWins = 0;
+            ScorePoints = 0;
+            ClearHand();
         }
 
         public override string ToString() => $"P{Id + 1}";
