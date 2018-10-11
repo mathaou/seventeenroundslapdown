@@ -56,9 +56,9 @@ namespace CardGameServer
                 Client.Close();
                 _listenThread.Join();
             }
-            catch
+            catch (Exception ex)
             {
-
+                Console.WriteLine($"Exception occurred while closing client.\n\n{ex}");
             }
         }
 
@@ -152,8 +152,7 @@ namespace CardGameServer
                         Disconnected?.Invoke(this, new ClientDisconnectedEventArgs(this, _disconnectReason));
                     }
                 }
-            }
-            
+            }            
         }
     }
 }

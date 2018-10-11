@@ -91,16 +91,16 @@ namespace CardGameServer.Cards
             switch (Suit)
             {
                 case CardSuit.Clubs:
-                    Console.Write('♣');
+                    Console.Write('\u2663');
                     break;
                 case CardSuit.Diamonds:
-                    Console.Write('♦');
+                    Console.Write('\u2666');
                     break;
                 case CardSuit.Hearts:
-                    Console.Write('♥');
+                    Console.Write('\u2665');
                     break;
                 case CardSuit.Spades:
-                    Console.Write('♠');
+                    Console.Write('\u2660');
                     break;
             }
 
