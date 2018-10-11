@@ -5,9 +5,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +54,12 @@ public class Player{
 	int[] ps = new int[3];
 	int[] pp = new int[3];
 	
+	int voteNew = 0;
+	
+	public int getVote() {
+		return voteNew;
+	}
+	
 	public int[] getPs() {
 		return ps;
 	}
@@ -83,19 +90,16 @@ public class Player{
 				while(true) {
 					try {
 						displayBytes += (char) inputStream.readByte();
-						if(gameStart) {
-							fillHand(displayBytes);
-						} else {
+						//System.out.println(displayBytes);
+						if(displayBytes.endsWith("}")) {
 							filterInput(displayBytes);
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
 					} catch (SlickException e) {
 						e.printStackTrace();
 					} catch (LWJGLException e) {
 						e.printStackTrace();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
@@ -114,7 +118,7 @@ public class Player{
 		this.round = round;
 	}
 
-	public void filterInput(String input) throws InterruptedException, SlickException {
+	public void filterInput(String input) throws InterruptedException, SlickException, LWJGLException {
 		String s = "";
 		try {
 			JSONObject sHand = new JSONObject(input);
@@ -150,20 +154,50 @@ public class Player{
 				ResultState.setWinningPlayer(winner.getJSONObject(0).getInt("id"));
 				ResultState.timer = 15;
 				GameState.gameEnd = true;
-				gameStart = true;
 				win = 0;
 				round = 1;
 				break;
 			case "client_info":
 				playerIndex = sHand.getInt("player_id");
 				JSONArray pHand = sHand.getJSONArray("cards");
-				for(int i=0; i < hand.size(); i++) {
-					hand.set(i, new Card(pHand.getInt(i) >> 4, pHand.getInt(i) & 0x0F));
+				for(int i = 0; i <sHand.getJSONArray("cards").length(); i++) {
+					if(GameState.gameEnd || this.hand.size() == sHand.getJSONArray("cards").length()) {
+						this.hand.set(i, new Card(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
+					} else {
+						addCard(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F);
+					}
 				}
 				break;
 			case "game_state":
-				setRound(sHand.getInt("round"));
-				GameState.gameEnd = false;
+				voteNew = 0;
+				round = 1;
+				currentPlayer = 0;
+				try {
+					for(int i = 0; i <sHand.getJSONArray("cards").length(); i++) {
+						if(GameState.gameEnd || this.hand.size() == sHand.getJSONArray("cards").length()) {
+							this.hand.set(i, new Card(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
+						} else {
+							addCard(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F);
+						}
+					}
+					win = 0;
+					GameState.gameEnd = false;
+					GameState.inBounds = false;
+					displayBytes = "";
+				} catch (JSONException e) {
+					
+				}
+				
+				break;
+			case "new_game_votes":
+				int temp = 0;
+				for(int i = 0; i < sHand.getJSONArray("vote_state").length(); i++) {
+					if(sHand.getJSONArray("vote_state").getBoolean(i)) {
+						temp++;
+					}
+				}
+				this.voteNew = temp;
+				System.out.println("VOTE: "+voteNew);
 				break;
 			}
 			displayBytes = "";
@@ -199,28 +233,6 @@ public class Player{
 	public void setCurrentPlayer(int currentPlayer) {
 		this.currentPlayer = currentPlayer;
 	}
-
-	public void fillHand(String hand) throws SlickException, LWJGLException {
-		this.hand.clear();
-		try {
-			JSONObject sHand = new JSONObject(hand);
-			for(int i = 0; i <sHand.getJSONArray("cards").length(); i++) {
-				if(GameState.gameEnd) {
-					this.hand.set(i, new Card(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
-				} else {
-					addCard(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F);
-				}
-			}
-			currentPlayer = 0;
-			win = 0;
-			round = 1;
-			gameStart = false;
-			GameState.inBounds = false;
-			displayBytes = "";
-		} catch (JSONException e) {
-			
-		}
-	}
 	
 	public int[] getPp() {
 		return pp;
@@ -239,8 +251,24 @@ public class Player{
 				try {
 					outputStream.write(formatCardAsJSONObject(GameState.selectedCard).getBytes("UTF-8"));
 					outputStream.flush();
+					GameState.cardFwip.play((float) Math.random()*.2f + .8f,.05f);
 					hand.remove(hand.size()-1);
 				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+	
+	public void voteYes() {
+		es.execute(new Thread() {
+			@Override
+			public void run() {
+				try {
+					outputStream.write("{\n\t\"msg_type\": \"vote_new_game\"\n}".getBytes("UTF-8"));
+					outputStream.flush();
+				}
+				catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
@@ -262,6 +290,8 @@ public class Player{
 	
 	public void disconnect() {
 		try {
+			inputStream.close();
+			outputStream.close();
 			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();

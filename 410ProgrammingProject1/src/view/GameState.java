@@ -32,7 +32,7 @@ public class GameState extends BasicGameState{
 
 	private final static int PORT_NUM = 6789;
 
-	Sound cardFwip;
+	public static Sound cardFwip;
 	
 	int offsetY;
 	int offsetX;
@@ -66,8 +66,6 @@ public class GameState extends BasicGameState{
 	@Override
 	public void init(GameContainer gc, StateBasedGame arg1) throws SlickException {
 		
-		//wolf = new Music("res/WOLF.wav");
-		
 		try {
 			hind = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/hind/hind-bold.ttf"));
 			lora = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/lora/Lora-Bold.ttf"));
@@ -83,7 +81,7 @@ public class GameState extends BasicGameState{
 		
 		oCards = new HashMap<Integer, Image>();
 		
-		this.selectedCard = 0;
+		selectedCard = 0;
 		
 		this.mouseX = 0;
 		this.mouseY = 0;
@@ -93,7 +91,7 @@ public class GameState extends BasicGameState{
 		
 		this.inBounds = false;
 		
-		gc.setSoundVolume(50f);
+		gc.setSoundVolume(40f);
 		
 		try {
 			boolean loop = false;
@@ -116,6 +114,11 @@ public class GameState extends BasicGameState{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		wolf = new Music("res/music/wolf.ogg");
+		cardFwip = new Sound("res/music/fwip.wav");
+		
+		MenuState.playMusic();
 		
 		cardFaces = new ArrayList<Image>();
 		
@@ -169,6 +172,7 @@ public class GameState extends BasicGameState{
 			}
 			arg1.enterState(control.StateBasedRunner.RESULT);
 			p1.setRound(1);
+			wolf.pause();
 			gameEnd = false;
 		}
 	}
@@ -323,7 +327,7 @@ public class GameState extends BasicGameState{
 		
 		for(int i = 0; i < p1.getPs().length; i++) {
 			g.drawString( "P"+ (i + 1), (400* (i + 1)), gc.getHeight() - 600);
-			g.drawString("Wins: "+p1.getPs()[i], (400* (i + 1) + 100), gc.getHeight() - 600);
+			g.drawString("Wins: "+p1.getPs()[i], (400* (i + 1) + 90), gc.getHeight() - 600);
 			g.drawString("Score: "+p1.getPoints()[i], (400* (i + 1) + (195 / 2)), gc.getHeight() - 570);
 		}
 		
@@ -359,7 +363,7 @@ public class GameState extends BasicGameState{
 	}
 	
 	public static void playSong() {
-		wolf.loop(1.0f, .05f);
+		wolf.loop(1.0f, .5f);
 	}
 	
 	@Override

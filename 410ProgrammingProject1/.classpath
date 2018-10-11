@@ -6,6 +6,10 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="res/font"/>
+	<classpathentry kind="src" path="res/natives"/>
+	<classpathentry kind="src" path="res/json"/>
+	<classpathentry kind="src" path="res/slick/lib"/>
 	<classpathentry kind="src" path="images"/>
 	<classpathentry kind="lib" path="res/slick/lib/slick.jar"/>
 	<classpathentry kind="lib" path="res/slick/lib/lwjgl.jar">
@@ -15,5 +19,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="res/slick/lib/jogg-0.0.7.jar"/>
 	<classpathentry kind="lib" path="res/json/json-20140107.jar"/>
+	<classpathentry kind="lib" path="res/slick/lib/jorbis-0.0.15.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

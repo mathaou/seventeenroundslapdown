@@ -24,7 +24,7 @@ public class MenuState extends BasicGameState{
 	
 	String fonts[];
 	
-	Music messenger;
+	public static Music messenger;
 	
 	@Override
 	public void init(GameContainer gc, StateBasedGame sbg) throws SlickException {
@@ -40,10 +40,6 @@ public class MenuState extends BasicGameState{
 		
 		this.fonts
 		        = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();		
-		
-		//this.messenger = new Music("/res/912.wav");
-		
-		//messenger.loop(1.0f, 1.0f);
 		
 		loopControl = fonts.length;
 		
@@ -65,8 +61,13 @@ public class MenuState extends BasicGameState{
 			fontList[i] = new TrueTypeFont(new Font(fonts[i], Font.PLAIN, 24), true);
 		}
 		
+		messenger = new Music("res/music/messenger.ogg");
 	}
-
+	
+	public static void playMusic() {
+		messenger.play();
+	}
+	
 	@Override
 	public void update(GameContainer gc, StateBasedGame sbg, int d) throws SlickException {
 		
@@ -88,32 +89,33 @@ public class MenuState extends BasicGameState{
 			gc.exit();
 		}
 		if(gc.getInput().isKeyDown(Keyboard.KEY_SPACE)) {
-			//messenger.stop();
+			messenger.stop();
 			sbg.enterState(control.StateBasedRunner.GAME);
-			//GameState.playSong();
+			GameState.playSong();
 		}
+	}
+	
+	public void drawCentered(TrueTypeFont ttfH, String s, GameContainer c, Graphics g, int offset) {
+		int textWidth = ttfH.getWidth(s);
+		g.setFont(ttfH);
+		g.drawString(s, c.getWidth()/2f - textWidth/2f, 
+                c.getHeight()/2f - ttfH.getLineHeight()/2f + offset);
 	}
 	
 	@Override
 	public void render(GameContainer gc, StateBasedGame sbg, Graphics g) throws SlickException {
 		g.setBackground(Color.black);
 		g.setColor(Color.pink);
-		drawCentered(chars, g, gc.getWidth()/2, gc.getHeight()/2);
-		g.drawString("Press [S p a c e] to Fight For Your Fate", 100 , gc.getHeight() - 100);
+		for(int i = 0; i < fontList.length; i++) {
+			drawCentered(fontList[i], chars, gc, g, i * 80);
+		}
+		g.setFont(new TrueTypeFont(new Font("Arial", Font.BOLD, 25), true));
+		g.drawString("Press [S p a c e] to Fight For Your Fate", 50 , gc.getHeight() - 50);
 	}
 
 	@Override
 	public int getID() {
 		return control.StateBasedRunner.MENU;
 	}
-	
-	public void drawCentered(String chars, Graphics g, int x, int y){
-		for(int i = 0; i < fontList.length; i ++) {
-			width = fontList[i].getWidth(chars);
-			height = fontList[i].getHeight(chars);
-			fontList[i].drawString(x, y + (i * 50), chars);
-			
-		}
-    }
 
 }

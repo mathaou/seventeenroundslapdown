@@ -203,7 +203,7 @@ Sent when a player plays a card from their hand.
 ```json
 {
     "msg_type": "play_card",
-    "card_index": 1, // Second card in hand
+    "card_index": 1, // Second card in hand	
     "card_id": 179 // Jack of Hearts
 }
 ```
