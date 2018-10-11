@@ -59,12 +59,18 @@ namespace CardGameServer
                 if (!Server.Start()) return false;
 
                 Server.ClientConnected += OnClientConnected;
+                Server.ClientDisconnected += OnClientDisconnected;
 
                 NewGame();
 
                 _active = true;
                 return true;
             }
+        }
+
+        private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        {
+            PromptCurrentPlayer();
         }
 
         public bool Stop()
@@ -149,6 +155,12 @@ namespace CardGameServer
                 }),
             turn = TurnIndex,
             table = _roundCards.Select(c => c == null ? 0 : c.Value.GetCardCode()).ToArray()
+        };
+
+        public object CreatePlayerVotesMessage() => new
+        {
+            msg_type = "new_game_votes",
+            vote_state = _players.Select(p => p.IsReady || p.IsAutonomous).ToArray()
         };
 
         private void PromptCurrentPlayer() => _players[TurnIndex].PromptTurn();
@@ -237,7 +249,7 @@ namespace CardGameServer
 
                 if (Round < RoundCount)
                 {
-                    Console.WriteLine($"Scores: {_players.OrderByDescending(p => p.ScoreWins).Select(p => $"{p} ({p.ScoreWins})").Aggregate((c, n) => $"{c}, {n}")}\n");
+                    Console.WriteLine($"Scores: {_players.OrderByDescending(p => p.ScoreWins).Select(p => $"{p} ({p.ScoreWins},{p.ScorePoints})").Aggregate((c, n) => $"{c}, {n}")}\n");
                     Round++;
                     LeadingPlayerId = winningId;
                     TurnIndex = LeadingPlayerId;
@@ -314,11 +326,13 @@ namespace CardGameServer
             }
 
             var msgGameEnd = CreateGameEndMessage(winners);
+            var msgVotes = CreatePlayerVotesMessage();
 
             // Send game_end message to players
             foreach (var player in _players)
             {
                 player.Client?.Send(msgGameEnd);
+                player.Client?.Send(msgVotes);
             }
 
             Console.WriteLine();

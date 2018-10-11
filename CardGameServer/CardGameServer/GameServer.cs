@@ -97,13 +97,18 @@ namespace CardGameServer
 
         private void AcceptClients()
         {
+            Console.WriteLine("Listening for connections");
             while (_active)
             {
                 try
                 {
+                    // Wait for new connection
                     var client = _server.AcceptTcpClient();
+
+                    // Create PlayerClient wrapper for new client connection
                     var playerClient = new PlayerClient(client);
 
+                    // Reject player if they cannot be placed in the game
                     if (ConnectedPlayerCount >= _game.MaxPlayers)
                     {
                         var msgReject = new
@@ -118,11 +123,16 @@ namespace CardGameServer
 
                     playerClient.Disconnected += OnClientDisconnected;
                     ClientConnected?.Invoke(this, new ClientConnectedEventArgs(playerClient));
+
+                    // Start up listener for client
                     playerClient.Start();
+
+                    // Add client to active client list
                     _clients.Add(playerClient);
                 }
                 catch (SocketException ex)
                 {
+                    // Handle socket error from canceling AcceptTcpClient call
                     if (ex.SocketErrorCode == SocketError.Interrupted)
                     {
                         return;

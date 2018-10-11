@@ -133,7 +133,7 @@ namespace CardGameServer
 
         public bool PlayCard(int cardIndex)
         {
-            if (cardIndex < 0 || cardIndex >= HandCount) return false;
+            if (cardIndex < 0 || cardIndex >= HandCount || _game.TurnIndex != Id) return false;
             var card = _hand[cardIndex];
             var e = new PlayerPlayCardEventArgs(this, card);
             if (!IsAutonomous) Console.ForegroundColor = ConsoleColor.Green;

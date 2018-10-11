@@ -15,6 +15,8 @@ namespace CardGameServer.Messages
             if (g.GameOver)
             {
                 p.IsReady = true;
+                var msgVotes = g.CreatePlayerVotesMessage();
+                g.Server.SendAll(msgVotes);
                 Console.WriteLine($"{p} is ready");
             }
         }

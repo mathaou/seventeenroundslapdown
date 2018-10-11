@@ -65,7 +65,6 @@ namespace CardGameServer
         public async void Send(JObject obj)
         {   
             if (Client == null || obj == null) return;
-
             var jsonString = obj.ToString();
             var jsonStringBytes = Encoding.UTF8.GetBytes(jsonString);
 
