@@ -32,21 +32,15 @@ public class GameState extends BasicGameState{
 
 	private final static int PORT_NUM = 6789;
 
-	public static Sound cardFwip;
+	public static Sound cardFwip, slapDown;
 	
-	int offsetY;
-	int offsetX;
-	int cardWidth, cardHeight;
-	
-	int timer = 0;
+	int offsetY, offsetX, cardWidth, cardHeight, timer = 0;
 	
 	int mouseX, mouseY;
 	
-	int playX, playY;
-	
 	public static int selectedCard;
 	
-	public static Player p1;
+	public static Player player;
 	
 	private Image back, background;
 	
@@ -89,9 +83,6 @@ public class GameState extends BasicGameState{
 		this.mouseX = 0;
 		this.mouseY = 0;
 		
-		this.playX = 0;
-		this.playY = 0;
-		
 		inBounds = false;
 		
 		gc.setSoundVolume(40f);
@@ -112,13 +103,14 @@ public class GameState extends BasicGameState{
 					JOptionPane.showMessageDialog(null, "Address formatted incorrectly. Try again.", "Address formatted incorrectly. Try again.", JOptionPane.ERROR_MESSAGE);
 				}
 			}
-			p1 = new Player(0, InetAddress.getByName(ip), PORT_NUM);
+			player = new Player(0, InetAddress.getByName(ip), PORT_NUM);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
 		wolf = new Music("res/music/wolf.ogg");
 		cardFwip = new Sound("res/music/fwip.wav");
+		slapDown = new Sound("res/music/slapdown.ogg");
 		
 		MenuState.playMusic();
 		
@@ -139,11 +131,11 @@ public class GameState extends BasicGameState{
 		mouseX = Mouse.getX();
 		mouseY = Mouse.getY();
 		
-		if(gc.getInput().isMousePressed(Input.MOUSE_LEFT_BUTTON) && mouseY < cardHeight + 50 && p1.getCurrentPlayer() == p1.getIndex()) {
+		if(gc.getInput().isMousePressed(Input.MOUSE_LEFT_BUTTON) && mouseY < cardHeight + 50 && player.getCurrentPlayer() == player.getIndex()) {
 			if(inBounds) {
-				if(selectedCard > -1 && p1.getHand().size() > 0) {
+				if(selectedCard > -1 && player.getHand().size() > 0) {
 					try {
-						p1.playCard(selectedCard);
+						player.playCard(selectedCard);
 					} catch (IOException e) {
 						e.printStackTrace();
 					} catch (ClassNotFoundException e) {
@@ -155,7 +147,7 @@ public class GameState extends BasicGameState{
 			}
 		}
 		
-		if(p1.getCurrentPlayer() == p1.getIndex()) {
+		if(player.getCurrentPlayer() == player.getIndex()) {
 			inBounds = true;
 		} else {
 			inBounds = false;
@@ -168,7 +160,7 @@ public class GameState extends BasicGameState{
 				e.printStackTrace();
 			}
 			arg1.enterState(control.StateBasedRunner.RESULT);
-			p1.setRound(1);
+			player.setRound(1);
 			wolf.pause();
 			gameEnd = false;
 		}
@@ -185,25 +177,12 @@ public class GameState extends BasicGameState{
 		renderImages(gc,g);
 	}
 	
-	public void loadBack() throws SlickException {
-		this.back = new Image("/images/back.png/");
-		this.background = new Image("/images/background.jpg/");
-		for(Card c: p1.getHand()) {
-			cardFaces.add(new Image(p1.buildFileName(c.getRank(), c.getSuit())));
-		}
-		for(int x = 2; x <=14; x++) {
-			for(int y = 1; y <= 4; y++) {
-				oCards.put(p1.formatCardID(x, y), new Image(p1.buildFileName(x, y)));
-			}
-		}
-	}
-	
 	public void renderImages(GameContainer gc, Graphics g){
 		background.draw(0,0,2.5f);
-		for(int i = 0; i < p1.getHand().size(); i++) {
+		for(int i = 0; i < player.getHand().size(); i++) {
 			try {
-				drawFace(i, oCards.get(p1.formatCardID(p1.getHand().get(i).getRank(), p1.getHand().get(i).getSuit())));
-				if((mouseX > (i * cardWidth) && mouseX < ((i + 1) * cardWidth)) && (mouseY > (0) && (mouseY < (cardHeight + 50))))
+				drawFace(i, oCards.get(player.formatCardID(player.getHand().get(i).getRank(), player.getHand().get(i).getSuit())));
+				if((mouseX > (i * cardWidth) + (cardWidth/2) && mouseX < ((i + 1) * cardWidth) + (cardWidth/2)) && (mouseY > (0) && (mouseY < (cardHeight + 50))))
 					selectedCard = i;
 			} catch (IndexOutOfBoundsException e) {
 				e.printStackTrace();
@@ -212,30 +191,30 @@ public class GameState extends BasicGameState{
 		
 		g.setColor(Color.white);
 		g.setFont(ttfL);
-		g.drawString("PLAYER "+(p1.getIndex() + 1), 50, 50);
+		g.drawString("PLAYER "+(player.getIndex() + 1), 50, 50);
 		
-		if(p1.getRound() == 1 && p1.getHand().size() == 17) {
-			g.drawString("Round: "+ (p1.getRound()) + "", gc.getWidth()-200, 50f);
+		if(player.getRound() == 1 && player.getHand().size() == 17) {
+			g.drawString("Round: "+ (player.getRound()) + "", gc.getWidth()-200, 50f);
 		} else { 
-			g.drawString("Round: "+ (p1.getRound() + 1) + "", gc.getWidth()-200, 50f);
+			g.drawString("Round: "+ (player.getRound() + 1) + "", gc.getWidth()-200, 50f);
 		}
 		
 		g.setFont(ttfH);
 		
-		for(int i = 0; i < p1.getPs().length; i++) {
+		for(int i = 0; i < player.getPs().length; i++) {
 			g.drawString( "P"+ (i + 1), (gc.getWidth()/5) * (i + 1) + (cardWidth/2), gc.getHeight() - 600);
-			g.drawString("Wins: "+p1.getPs()[i], (gc.getWidth()/5) * (i + 1) + (cardWidth/2), gc.getHeight() - 550);
-			g.drawString("Score: "+p1.getPoints()[i], (gc.getWidth()/5) * (i + 1) + (cardWidth/2), gc.getHeight() - 500);
+			g.drawString("Wins: "+player.getPs()[i], (gc.getWidth()/5) * (i + 1) + (cardWidth/2), gc.getHeight() - 550);
+			g.drawString("Score: "+player.getPoints()[i], (gc.getWidth()/5) * (i + 1) + (cardWidth/2), gc.getHeight() - 500);
 		}
 		
-		crownIcon.draw((gc.getWidth()/5) * (p1.getWin() + 1) + (cardWidth/2), 100, .4f, Color.yellow);
+		crownIcon.draw((gc.getWidth()/5) * (player.getWin() + 1) + (cardWidth/2), 100, .4f, Color.yellow);
 		
-		for(int i = 0; i < p1.getPlayedCards().length; i++) {
-			if(p1.playedCards[i] > -1) {
+		for(int i = 0; i < player.getPlayedCards().length; i++) {
+			if(player.playedCards[i] > -1) {
 				back.draw((gc.getWidth()/5) * (i + 1) + (cardWidth/2), 150);
-				oCards.get(p1.getPlayedCards()[i]).draw((gc.getWidth()/5) * (i + 1) + (cardWidth/2), 150);
+				oCards.get(player.getPlayedCards()[i]).draw((gc.getWidth()/5) * (i + 1) + (cardWidth/2), 150);
 			} else {
-				if(i == p1.getCurrentPlayer()) {
+				if(i == player.getCurrentPlayer()) {
 					g.setColor(Color.orange);
 				} else {
 					g.setColor(Color.black);
@@ -243,10 +222,6 @@ public class GameState extends BasicGameState{
 				g.fillRoundRect((gc.getWidth()/5) * (i + 1) + (cardWidth/2), 150, 222, cardHeight, 2);
 			}
 		}
-	}
-	
-	public static Player getP1() {
-		return p1;
 	}
 
 	public void drawFace(int index, Image i) {
@@ -262,6 +237,19 @@ public class GameState extends BasicGameState{
 			}
 	}
 	
+	public void loadBack() throws SlickException {
+		this.back = new Image("/images/back.png/");
+		this.background = new Image("/images/background.jpg/");
+		for(Card c: player.getHand()) {
+			cardFaces.add(new Image(player.buildFileName(c.getRank(), c.getSuit())));
+		}
+		for(int x = 2; x <=14; x++) {
+			for(int y = 1; y <= 4; y++) {
+				oCards.put(player.formatCardID(x, y), new Image(player.buildFileName(x, y)));
+			}
+		}
+	}
+	
 	public static void playSong() {
 		wolf.loop(1.0f, .5f);
 	}
@@ -269,6 +257,10 @@ public class GameState extends BasicGameState{
 	@Override
 	public int getID() {
 		return control.StateBasedRunner.GAME;
+	}
+	
+	public static Player getP1() {
+		return player;
 	}
 
 }

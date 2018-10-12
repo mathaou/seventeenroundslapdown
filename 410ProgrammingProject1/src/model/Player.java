@@ -27,20 +27,16 @@ public class Player{
 	public ArrayList<Card> hand;
 	public int[] playedCards;
 	
-	public int top;
-	
-	private int playerIndex;
+	public int top, playerIndex, round = 1, currentPlayer = 0, win = 0, voteNew;
 	
 	private Socket socket;
-	
-	private Scanner scan;
 	
 	private DataOutputStream outputStream;
 	private DataInputStream inputStream;
 	
 	private final int SERVER_PORT;
 	
-	private String displayBytes = "", temp;
+	private String displayBytes = "";
 	
 	Thread connectThread, recieveThread;
 	
@@ -48,26 +44,9 @@ public class Player{
 	
 	boolean gameStart = true, roundTurn = false;
 	
-	int round = 1;
-	int currentPlayer = 0;
-	int win = 0;
 	int[] ps = new int[3];
 	int[] pp = new int[3];
 	
-	int voteNew = 0;
-	
-	public int getVote() {
-		return voteNew;
-	}
-	
-	public int[] getPs() {
-		return ps;
-	}
-
-	public void setPs(int[] ps) {
-		this.ps = ps;
-	}
-
 	public Player(int playerIndex, InetAddress serverAddress, int serverPort) throws Exception{
 		
 		this.playerIndex = playerIndex;
@@ -75,8 +54,6 @@ public class Player{
 		this.playedCards = new int[] {-1,-1,-1};
 		
 		this.top = 17;
-		
-		scan = new Scanner(System.in);
 		
 		this.SERVER_PORT = serverPort;
 		
@@ -108,14 +85,6 @@ public class Player{
 		recieveThread.start();
 		
 	}
-	
-	public int getRound() {
-		return round;
-	}
-
-	public void setRound(int round) {
-		this.round = round;
-	}
 
 	public void filterInput(String input) throws InterruptedException, SlickException, LWJGLException {
 		String s = "";
@@ -146,7 +115,8 @@ public class Player{
 							roundTurn = false;
 						}
 					}
-					
+					if(sHand.getBoolean("slapdown"))
+						GameState.slapDown.play();
 					break;
 			case "game_end":
 				JSONArray winner = sHand.getJSONArray("scoreboard");
@@ -184,7 +154,7 @@ public class Player{
 					GameState.inBounds = false;
 					displayBytes = "";
 				} catch (JSONException e) {
-					
+					e.printStackTrace();
 				}
 				
 				break;
@@ -201,42 +171,6 @@ public class Player{
 			
 		}
 	}
-	
-	public int[] getPoints() {
-		return pp;
-	}
-
-	public boolean isRoundTurn() {
-		return roundTurn;
-	}
-
-	public void setRoundTurn(boolean roundTurn) {
-		this.roundTurn = roundTurn;
-	}
-
-	public int getWin() {
-		return win;
-	}
-
-	public void setWin(int win) {
-		this.win = win;
-	}
-
-	public int getCurrentPlayer() {
-		return currentPlayer;
-	}
-
-	public void setCurrentPlayer(int currentPlayer) {
-		this.currentPlayer = currentPlayer;
-	}
-	
-	public int[] getPp() {
-		return pp;
-	}
-
-	public void setPp(int[] pp) {
-		this.pp = pp;
-	}
 
 	public void playCard(int selectedCard) throws IOException, ClassNotFoundException, InterruptedException {
 		es.execute(new Thread() {
@@ -245,7 +179,7 @@ public class Player{
 				try {
 					outputStream.write(formatCardAsJSONObject(GameState.selectedCard).getBytes("UTF-8"));
 					outputStream.flush();
-					GameState.cardFwip.play((float) Math.random()*.2f + .8f,.005f);
+					GameState.cardFwip.play((float) Math.random()*.2f + .8f,.0005f);
 					hand.remove(hand.size()-1);
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -291,6 +225,33 @@ public class Player{
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public String formatCardAsJSONObject(int selectedCard) {
+		return "{\n\t\"msg_type\": \"play_card\",\n\t\"card_index\": "+selectedCard+",\n\t\"card_id\": "+formatCardID(hand.get(selectedCard).getRank(), hand.get(selectedCard).getSuit())+"\n}\n";
+	}
+	
+	public int formatCardID(int rank, int suit) {
+		int num = 0;
+		String binary = intToBinary(rank, 4) + "" + intToBinary(suit, 4);
+		num = Integer.parseInt(binary, 2);
+		
+		return num;
+	}
+	
+	public static String intToBinary (int n, int numOfBits) {
+		   String binary = "";
+		   for(int i = 0; i < numOfBits; ++i, n/=2) {
+		      switch (n % 2) {
+		         case 0:
+		            binary = "0" + binary;
+		            break;
+		         case 1:
+		            binary = "1" + binary;
+		            break;
+		      }
+		   }
+		   return binary;
 	}
 	
 	public String buildFileName(int rank, int suit) {
@@ -359,42 +320,17 @@ public class Player{
 	}
 	
 	public void addCard(int rank, int suit) throws SlickException, LWJGLException {
-		String fileName = buildFileName(rank, suit);
 		if(this.hand.size() != top) {
 			this.hand.add(new Card(rank, suit));
 		}
 	}
 	
+	/*
+	 * GETTERS AND SETTERS
+	 */
+	
 	public ArrayList<Card> getHand(){
 		return this.hand;
-	}
-	
-	
-	public String formatCardAsJSONObject(int selectedCard) {
-		return "{\n\t\"msg_type\": \"play_card\",\n\t\"card_index\": "+selectedCard+",\n\t\"card_id\": "+formatCardID(hand.get(selectedCard).getRank(), hand.get(selectedCard).getSuit())+"\n}\n";
-	}
-	
-	public int formatCardID(int rank, int suit) {
-		int num = 0;
-		String binary = intToBinary(rank, 4) + "" + intToBinary(suit, 4);
-		num = Integer.parseInt(binary, 2);
-		
-		return num;
-	}
-	
-	public static String intToBinary (int n, int numOfBits) {
-		   String binary = "";
-		   for(int i = 0; i < numOfBits; ++i, n/=2) {
-		      switch (n % 2) {
-		         case 0:
-		            binary = "0" + binary;
-		            break;
-		         case 1:
-		            binary = "1" + binary;
-		            break;
-		      }
-		   }
-		   return binary;
 	}
 	
 	public int[] getPlayedCards(){
@@ -403,6 +339,63 @@ public class Player{
 	
 	public int getIndex() {
 		return this.playerIndex;
+	}
+	
+	public int getVote() {
+		return voteNew;
+	}
+	
+	public int[] getPs() {
+		return ps;
+	}
+
+	public void setPs(int[] ps) {
+		this.ps = ps;
+	}
+	
+	
+	public int[] getPoints() {
+		return pp;
+	}
+
+	public boolean isRoundTurn() {
+		return roundTurn;
+	}
+
+	public void setRoundTurn(boolean roundTurn) {
+		this.roundTurn = roundTurn;
+	}
+
+	public int getWin() {
+		return win;
+	}
+
+	public void setWin(int win) {
+		this.win = win;
+	}
+
+	public int getCurrentPlayer() {
+		return currentPlayer;
+	}
+
+	public void setCurrentPlayer(int currentPlayer) {
+		this.currentPlayer = currentPlayer;
+	}
+	
+	public int[] getPp() {
+		return pp;
+	}
+
+	public void setPp(int[] pp) {
+		this.pp = pp;
+	}
+	
+	public int getRound() {
+		return round;
+	}
+
+	public void setRound(int round) {
+		this.round = round;
 	}
 	
 }

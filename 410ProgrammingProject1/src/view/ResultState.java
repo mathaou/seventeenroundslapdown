@@ -16,14 +16,13 @@ import org.newdawn.slick.state.StateBasedGame;
 
 public class ResultState extends BasicGameState{
 
-	static int winningPlayer = -1;
+	public static int winningPlayer = -1, timer;
 	
 	public Font hind;
 	
 	public TrueTypeFont ttfH;
 	
 	int countDown = 0;
-	public static int timer;
 	
 	public boolean vote = false;
 	
@@ -41,28 +40,6 @@ public class ResultState extends BasicGameState{
 	}
 
 	@Override
-	public void render(GameContainer c, StateBasedGame sbg, Graphics g) throws SlickException {
-		g.setFont(ttfH);
-
-		drawCentered("P"+(winningPlayer + 1) +" WINS, " + timer + " seconds left...", c, g, 0, 0);
-		
-		for(int i = 0; i < GameState.getP1().getPs().length; i++) {
-			drawCentered("P"+ (i + 1), c, g, (i * 300) - 300, 200);
-			drawCentered("Wins: "+GameState.getP1().getPs()[i], c, g, (300 * i) - 300, 300);
-			drawCentered("Points: "+GameState.getP1().getPp()[i], c, g, (300 * i) - 300, 400);
-		}
-		
-		drawCentered("Press [ V ] to vote to start new game...", c, g, -300, -300);
-		g.drawString("Votes: "+GameState.getP1().getVote(), 50, c.getHeight()- 50);
-	}
-
-	public void drawCentered(String s, GameContainer c, Graphics g, int offsetX, int offsetY) {
-		int textWidth = ttfH.getWidth(s);
-		g.drawString(s, c.getWidth()/2f - textWidth/2f + offsetX, 
-                c.getHeight()/2f - ttfH.getLineHeight()/2f + offsetY);
-	}
-	
-	@Override
 	public void update(GameContainer arg0, StateBasedGame arg1, int arg2) throws SlickException {
 		countDown += arg2;
 		if(countDown > 1200) {
@@ -71,6 +48,7 @@ public class ResultState extends BasicGameState{
 				timer--;
 			}
 		}
+		
 		if(arg0.getInput().isKeyPressed(Keyboard.KEY_V)) {
 			if(!vote) {
 				GameState.getP1().voteYes();
@@ -94,7 +72,29 @@ public class ResultState extends BasicGameState{
 			arg1.enterState(control.StateBasedRunner.GAME);
 		}
 	}
+	
+	@Override
+	public void render(GameContainer c, StateBasedGame sbg, Graphics g) throws SlickException {
+		g.setFont(ttfH);
 
+		drawCentered("P"+(winningPlayer + 1) +" WINS, " + timer + " seconds left...", c, g, 0, 0);
+		
+		for(int i = 0; i < GameState.getP1().getPs().length; i++) {
+			drawCentered("P"+ (i + 1), c, g, (i * 300) - 300, 200);
+			drawCentered("Wins: "+GameState.getP1().getPs()[i], c, g, (300 * i) - 300, 300);
+			drawCentered("Points: "+GameState.getP1().getPp()[i], c, g, (300 * i) - 300, 400);
+		}
+		
+		drawCentered("Press [ V ] to vote to start new game...", c, g, -300, -300);
+		g.drawString("Votes: "+GameState.getP1().getVote(), 50, c.getHeight()- 50);
+	}
+
+	public void drawCentered(String s, GameContainer c, Graphics g, int offsetX, int offsetY) {
+		int textWidth = ttfH.getWidth(s);
+		g.drawString(s, c.getWidth()/2f - textWidth/2f + offsetX, 
+                c.getHeight()/2f - ttfH.getLineHeight()/2f + offsetY);
+	}
+	
 	@Override
 	public int getID() {
 		return control.StateBasedRunner.RESULT;

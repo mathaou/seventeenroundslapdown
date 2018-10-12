@@ -65,7 +65,7 @@ public class MenuState extends BasicGameState{
 	}
 	
 	public static void playMusic() {
-		messenger.play();
+		messenger.loop(1.0f, .5f);
 	}
 	
 	@Override
@@ -110,7 +110,7 @@ public class MenuState extends BasicGameState{
 			drawCentered(fontList[i], chars, gc, g, i * 80);
 		}
 		g.setFont(new TrueTypeFont(new Font("Arial", Font.BOLD, 25), true));
-		g.drawString("Press [S p a c e] to Fight For Your Fate", 50 , gc.getHeight() - 50);
+		g.drawString("Press [ S p a c e ] to Fight For Your Fate", 50 , gc.getHeight() - 50);
 	}
 
 	@Override
