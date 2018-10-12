@@ -47,12 +47,12 @@ public class ResultState extends BasicGameState{
 		drawCentered("P"+(winningPlayer + 1) +" WINS, " + timer + " seconds left...", c, g, 0, 0);
 		
 		for(int i = 0; i < GameState.getP1().getPs().length; i++) {
-			drawCentered("P"+ (i + 1)+"\n\tWins: "+GameState.getP1().getPs()[i]+"\n\tPoints: "+GameState.getP1().getPp()[i], c, g, 0, 200 * i);
-			//drawCentered("Wins: "+GameState.getP1().getPs()[i], c, g, (300 * i) - 200, 160);
-			//drawCentered("Points: "+GameState.getP1().getPp()[i], c, g, (300 * i) - 200, 240);
+			drawCentered("P"+ (i + 1), c, g, (i * 300) - 300, 200);
+			drawCentered("Wins: "+GameState.getP1().getPs()[i], c, g, (300 * i) - 300, 300);
+			drawCentered("Points: "+GameState.getP1().getPp()[i], c, g, (300 * i) - 300, 400);
 		}
 		
-		drawCentered("Press [S P A C E] to vote to start new game...", c, g, -300, -300);
+		drawCentered("Press [ V ] to vote to start new game...", c, g, -300, -300);
 		g.drawString("Votes: "+GameState.getP1().getVote(), 50, c.getHeight()- 50);
 	}
 
@@ -71,7 +71,7 @@ public class ResultState extends BasicGameState{
 				timer--;
 			}
 		}
-		if(arg0.getInput().isKeyPressed(Keyboard.KEY_SPACE)) {
+		if(arg0.getInput().isKeyPressed(Keyboard.KEY_V)) {
 			if(!vote) {
 				GameState.getP1().voteYes();
 				vote = true;

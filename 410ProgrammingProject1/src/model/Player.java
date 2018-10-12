@@ -90,7 +90,6 @@ public class Player{
 				while(true) {
 					try {
 						displayBytes += (char) inputStream.readByte();
-						//System.out.println(displayBytes);
 						if(displayBytes.endsWith("}")) {
 							filterInput(displayBytes);
 						}
@@ -192,12 +191,9 @@ public class Player{
 			case "new_game_votes":
 				int temp = 0;
 				for(int i = 0; i < sHand.getJSONArray("vote_state").length(); i++) {
-					if(sHand.getJSONArray("vote_state").getBoolean(i)) {
-						temp++;
-					}
+					temp = temp + (sHand.getJSONArray("vote_state").getBoolean(i) ? 1 : 0);
 				}
 				this.voteNew = temp;
-				System.out.println("VOTE: "+voteNew);
 				break;
 			}
 			displayBytes = "";
@@ -243,15 +239,13 @@ public class Player{
 	}
 
 	public void playCard(int selectedCard) throws IOException, ClassNotFoundException, InterruptedException {
-		/*outputStream.write(formatCardAsJSONObject(GameState.selectedCard).getBytes("UTF-8"));
-		outputStream.flush();*/
 		es.execute(new Thread() {
 			@Override
 			public void run() {
 				try {
 					outputStream.write(formatCardAsJSONObject(GameState.selectedCard).getBytes("UTF-8"));
 					outputStream.flush();
-					GameState.cardFwip.play((float) Math.random()*.2f + .8f,.05f);
+					GameState.cardFwip.play((float) Math.random()*.2f + .8f,.005f);
 					hand.remove(hand.size()-1);
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -290,6 +284,7 @@ public class Player{
 	
 	public void disconnect() {
 		try {
+			es.shutdownNow();
 			inputStream.close();
 			outputStream.close();
 			socket.close();
@@ -370,12 +365,6 @@ public class Player{
 		}
 	}
 	
-//	public void removeCard(Card cardToRemove) {
-//		if(this.hand.contains(cardToRemove)) {
-//			this.hand.remove(cardToRemove);
-//		}
-//	}
-	
 	public ArrayList<Card> getHand(){
 		return this.hand;
 	}
@@ -383,22 +372,16 @@ public class Player{
 	
 	public String formatCardAsJSONObject(int selectedCard) {
 		return "{\n\t\"msg_type\": \"play_card\",\n\t\"card_index\": "+selectedCard+",\n\t\"card_id\": "+formatCardID(hand.get(selectedCard).getRank(), hand.get(selectedCard).getSuit())+"\n}\n";
-		//return String.format("{\n\t\"msgtype\": \"play_card\",\n\t\"card_index\": %d,\n\t\"card_id\": %d\n}", selectedCard, formatCardID(hand.get(selectedCard).getRank(), hand.get(selectedCard).getSuit()));
 	}
 	
-	
-	//generates binary to send
 	public int formatCardID(int rank, int suit) {
 		int num = 0;
-		
 		String binary = intToBinary(rank, 4) + "" + intToBinary(suit, 4);
-		
 		num = Integer.parseInt(binary, 2);
 		
 		return num;
 	}
 	
-	//converter
 	public static String intToBinary (int n, int numOfBits) {
 		   String binary = "";
 		   for(int i = 0; i < numOfBits; ++i, n/=2) {
@@ -411,7 +394,6 @@ public class Player{
 		            break;
 		      }
 		   }
-
 		   return binary;
 	}
 	

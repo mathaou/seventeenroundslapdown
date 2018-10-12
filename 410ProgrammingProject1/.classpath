@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="src" path="res/font"/>
-	<classpathentry kind="src" path="res/natives"/>
-	<classpathentry kind="src" path="res/json"/>
-	<classpathentry kind="src" path="res/slick/lib"/>
-	<classpathentry kind="src" path="images"/>
-	<classpathentry kind="lib" path="res/slick/lib/slick.jar"/>
 	<classpathentry kind="lib" path="res/slick/lib/lwjgl.jar">
 		<attributes>
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="410ProgrammingProject1/res/natives"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="res/slick/lib/slick.jar"/>
 	<classpathentry kind="lib" path="res/slick/lib/jogg-0.0.7.jar"/>
 	<classpathentry kind="lib" path="res/json/json-20140107.jar"/>
 	<classpathentry kind="lib" path="res/slick/lib/jorbis-0.0.15.jar"/>
+	<classpathentry kind="src" path="images"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
