@@ -1,4 +1,10 @@
-﻿using CardGameServer.Cards;
+﻿/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+using CardGameServer.Cards;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -163,7 +169,10 @@ namespace CardGameServer
             vote_state = _players.Select(p => p.IsReady || p.IsAutonomous).ToArray()
         };
 
-        private void PromptCurrentPlayer() => _players[TurnIndex].PromptTurn();
+        private void PromptCurrentPlayer()
+        {
+            if (TurnIndex > -1) _players[TurnIndex].PromptTurn();
+        }
 
         private void OnPlayingCard(object sender, PlayerPlayCardEventArgs e)
         {
@@ -215,23 +224,27 @@ namespace CardGameServer
                         lowestAnyRank = card.Rank;
                     }
                 }
+
                 var roundWinner = _players[winningId];
+
+                int points = _roundCards.Sum(c => c.HasValue ? (int)c.Value.Rank : 0);
+
+                // Update score for round winner
+                int winningScore = ++roundWinner.ScoreWins;
 
                 // Empty pool
                 for (int i = 0; i < _roundCards.Length; i++) _roundCards[i] = null;
 
-                // Update score for round winner
-                int winningScore = ++roundWinner.ScoreWins;
-                roundWinner.ScorePoints += (int)highestSuitRank;
-
                 // Award slapdown bonus if nobody matched leading suit and the leading card has the lowest rank
                 if (slapdown = numValidCards == 1 && highestSuitRank == lowestAnyRank)
                 {
-                    roundWinner.ScorePoints += Settings.SlapdownBonus;
+                    points *= Settings.SlapdownBonus;
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($">> Slapdown Bonus +{Settings.SlapdownBonus}");
+                    Console.WriteLine($">> Slapdown Bonus x{Settings.SlapdownBonus}");
                     Console.ResetColor();
                 }
+
+                roundWinner.ScorePoints += points;
 
                 Console.WriteLine($"{_players[winningId]} wins round {Round}");
 
@@ -249,7 +262,7 @@ namespace CardGameServer
 
                 if (Round < RoundCount)
                 {
-                    Console.WriteLine($"Scores: {_players.OrderByDescending(p => p.ScoreWins).Select(p => $"{p} ({p.ScoreWins},{p.ScorePoints})").Aggregate((c, n) => $"{c}, {n}")}\n");
+                    Console.WriteLine($"Scores: {_players.OrderByDescending(p => p.ScoreWins).Select(p => $"{p} ({p.ScoreWins}|{p.ScorePoints})").Aggregate((c, n) => $"{c}, {n}")}\n");
                     Round++;
                     LeadingPlayerId = winningId;
                     TurnIndex = LeadingPlayerId;

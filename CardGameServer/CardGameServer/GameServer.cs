@@ -1,4 +1,10 @@
-﻿using CardGameServer.Messages;
+﻿/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+using CardGameServer.Messages;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
