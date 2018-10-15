@@ -2,7 +2,7 @@ package view;
 
 import java.awt.Font;
 import java.awt.FontFormatException;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -28,15 +28,19 @@ import org.newdawn.slick.state.StateBasedGame;
 import model.Card;
 import model.Player;
 
+/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
 public class GameState extends BasicGameState{
 
 	private final static int PORT_NUM = 6789;
 
 	public static Sound cardFwip, slapDown;
 	
-	int offsetY, offsetX, cardWidth, cardHeight, timer = 0;
-	
-	int mouseX, mouseY;
+	public int offsetY, offsetX, cardWidth, cardHeight, timer = 0, mouseX, mouseY;
 	
 	public static int selectedCard;
 	
@@ -44,7 +48,7 @@ public class GameState extends BasicGameState{
 	
 	private Image back, background;
 	
-	public static boolean inBounds, gameEnd = false;
+	public static boolean inBounds, gameEnd = false, slapdown = false;
 	
 	public static Music wolf;
 	
@@ -66,8 +70,8 @@ public class GameState extends BasicGameState{
 		cardHeight = 323;
 		
 		try {
-			hind = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/hind/hind-bold.ttf"));
-			lora = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/lora/Lora-Bold.ttf"));
+			hind = Font.createFont(Font.TRUETYPE_FONT, new FileInputStream("res/font/hind/hind-bold.ttf"));
+			lora = Font.createFont(Font.TRUETYPE_FONT, new FileInputStream("res/font/lora/Lora-Bold.ttf"));
 		} catch (FontFormatException | IOException e1) {
 			e1.printStackTrace();
 		}
@@ -86,6 +90,8 @@ public class GameState extends BasicGameState{
 		inBounds = false;
 		
 		gc.setSoundVolume(40f);
+		
+		//make player (establish connection)
 		
 		try {
 			boolean loop = false;
@@ -106,11 +112,15 @@ public class GameState extends BasicGameState{
 			player = new Player(0, InetAddress.getByName(ip), PORT_NUM);
 		} catch (Exception e) {
 			e.printStackTrace();
+			System.exit(0);
 		}
 		
-		wolf = new Music("res/music/wolf.ogg");
-		cardFwip = new Sound("res/music/fwip.wav");
-		slapDown = new Sound("res/music/slapdown.ogg");
+		//attempted to load resources so they would be able to be included in the runnable jar, but GameState.class.getResourceAsStream("./...") wasn't working
+		//even after much stack overflowin'
+		
+		wolf = new Music("/res/music/wolf.ogg");
+		cardFwip = new Sound("/res/music/fwip.wav");
+		slapDown = new Sound("/res/music/slapdown.ogg");
 		
 		MenuState.playMusic();
 		
@@ -124,7 +134,6 @@ public class GameState extends BasicGameState{
 		gc.setFullscreen(true);
 		
 	}
-
 
 	@Override
 	public void update(GameContainer gc, StateBasedGame arg1, int d) throws SlickException {
@@ -155,7 +164,7 @@ public class GameState extends BasicGameState{
 		
 		if(gameEnd) {
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -166,15 +175,26 @@ public class GameState extends BasicGameState{
 		}
 		
 		if(gc.getInput().isKeyDown(Keyboard.KEY_ESCAPE)) {
+			getP1().disconnect();
 			gc.exit();
 		}
-		
 	}
 	
 	@Override
 	public void render(GameContainer gc, StateBasedGame arg1, Graphics g) throws SlickException {
 		g.setBackground(Color.black);
 		renderImages(gc,g);
+		if(slapdown) {
+			g.setColor(Color.white);
+			drawCentered(ttfL, "S L A P D O W N", gc, g, (int) (-1 * (gc.getHeight()/2f) + 50));
+		}
+	}
+	
+	public void drawCentered(TrueTypeFont ttfH, String s, GameContainer c, Graphics g, int offset) {
+		int textWidth = ttfH.getWidth(s);
+		g.setFont(ttfH);
+		g.drawString(s, c.getWidth()/2f - textWidth/2f, 
+                c.getHeight()/2f - ttfH.getLineHeight()/2f + offset);
 	}
 	
 	public void renderImages(GameContainer gc, Graphics g){
@@ -185,6 +205,7 @@ public class GameState extends BasicGameState{
 				if((mouseX > (i * cardWidth) + (cardWidth/2) && mouseX < ((i + 1) * cardWidth) + (cardWidth/2)) && (mouseY > (0) && (mouseY < (cardHeight + 50))))
 					selectedCard = i;
 			} catch (IndexOutOfBoundsException e) {
+				getP1().disconnect();
 				e.printStackTrace();
 			}
 		}

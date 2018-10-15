@@ -1,0 +1,27 @@
+Seventeen Round Slap Down: User Manual
+
+Rules:
+
+P1 leads the first round.
+For each round each player plays one card in order.
+The player leading a round leads a card in the hand.
+The next player plays based on the following rules
+	1. If you have cards in the suit that is leading, then play one in the suit.
+	2. Otherwise, play a card from any remaining suit.
+
+The player who plays the highest card in the suit that is lead is the winner of the round.
+The winner of a round leads the next round.
+
+How to play:
+
+Upon running the game client, enter the IP address of the system hosting the server.
+From the title screen, hit the space key to enter the game.
+At the start of the game, your hand will be displayed at the bottom of the screen.
+The turn is shown by the yellow on the card display; whoever's turn it is will have their card space displayed be yellow.
+To play a card, move the cursor over your hand and click on the card you want to play.
+
+When the game ends, press V to vote for another round.
+To close out of the game client, hit the escape key.
+
+Slapdown bonus:
+When a players played card for the round is the lowest in terms of rank and no one else follows the suit, their total points for winning the round are doubled.

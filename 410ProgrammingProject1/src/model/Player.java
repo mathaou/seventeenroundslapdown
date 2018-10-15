@@ -5,13 +5,13 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,9 +22,18 @@ import org.newdawn.slick.SlickException;
 import view.GameState;
 import view.ResultState;
 
+/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+//client and player
 public class Player{
 	
+	//hand
 	public ArrayList<Card> hand;
+	//cards played as they come in
 	public int[] playedCards;
 	
 	public int top, playerIndex, round = 1, currentPlayer = 0, win = 0, voteNew;
@@ -37,8 +46,6 @@ public class Player{
 	private final int SERVER_PORT;
 	
 	private String displayBytes = "";
-	
-	Thread connectThread, recieveThread;
 	
 	ExecutorService es;
 	
@@ -59,30 +66,45 @@ public class Player{
 		
 		connect(serverAddress, serverPort);
 		
-		es = Executors.newFixedThreadPool(2);
+		es = Executors.newFixedThreadPool(3);
 		
-		this.recieveThread = new Thread() {
+		//receive thread
+		es.execute(new Thread() {
 			@Override
 			public void run() {
 				while(true) {
 					try {
 						displayBytes += (char) inputStream.readByte();
-						if(displayBytes.endsWith("}")) {
+						if(displayBytes.endsWith("}") && !es.isShutdown()) {
 							filterInput(displayBytes);
 						}
 					} catch (IOException e) {
+						//error message upon connection interruption
+						JOptionPane error = new JOptionPane("CONNECTION INTERRUPT", JOptionPane.ERROR_MESSAGE);
+						JDialog dialog = error.createDialog("Failure");
+						dialog.setAlwaysOnTop(true);
+						dialog.setVisible(true);
+						e.printStackTrace();
+						
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+						
+						System.exit(0);
 					} catch (SlickException e) {
 						e.printStackTrace();
 					} catch (LWJGLException e) {
 						e.printStackTrace();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
+					} catch (JSONException e) {
+						//e.printStackTrace();
 					}
 				}
 			}
-		};
-		
-		recieveThread.start();
+		});
 		
 	}
 
@@ -92,17 +114,53 @@ public class Player{
 			JSONObject sHand = new JSONObject(input);
 			s = sHand.getString("msg_type");
 			switch(s) {
+			
+			/*
+			 * {	
+				    "msg_type": "player_score",
+				    "player_index": 1, // Player 2
+				    "wins": 3,
+				    "points": 34
+				}
+			 */
+			
+			// Update score
+			
 			case "player_score":
 				ps[sHand.getInt("player_index")] = sHand.getInt("wins");
 				pp[sHand.getInt("player_index")] = sHand.getInt("points");
 				break;
+				
+			/*
+			 * {
+				    "msg_type": "client_move",
+				    "player_index": 1, // Player 2 plays a card
+				    "card": 132, // 8 of Spades
+				    "round": 3, // Round number that the play is for
+				    "next_round": 3, // Round after play
+				    "next_turn": 2, // Index of next player to go
+				    // Result of play
+				    // -1 if no action, otherwise player index of round winner
+				    "result_type": -1
+				}
+			 */
+				
+			// each card played	
+				
 			case "client_move":
+					GameState.slapdown = false;	
+					//update played cards
 					playedCards[sHand.getInt("player_index")] = sHand.getInt("card");
+					//update currentPlayer
 					if(sHand.getInt("next_turn") != currentPlayer) {
 						currentPlayer = sHand.getInt("next_turn");
 					}
+					
+					//get winner
 					if(sHand.getInt("result_type") > -1)
 						setWin(sHand.getInt("result_type"));
+					
+					//complicated ish to get start of new turn
 					if(sHand.getInt("round") == sHand.getInt("next_round") && round != 16) {
 						roundTurn = true;
 					} else {
@@ -115,29 +173,110 @@ public class Player{
 							roundTurn = false;
 						}
 					}
-					if(sHand.getBoolean("slapdown"))
-						GameState.slapDown.play();
+					
+					//slapdown bonus trigger
+					if(sHand.getBoolean("slapdown")) {
+						GameState.slapdown = true;
+						GameState.slapDown.play(1.0f, 2.2f);
+					}
 					break;
+					
+			/*
+			 * {
+				    "msg_type": "game_end",
+				    // # of players tied for first
+				    "winner_count": 1,
+				    // Scoreboard sorted in descending order of wins, then points
+				    "scoreboard": [
+				        {
+				            "id": 2,
+				            "wins": 7,
+				            "points": 85
+				        },
+				        {
+				            "id": 1,
+				            "wins": 7,
+				            "points": 78
+				        },
+				        {
+				            "id": 3,
+				            "wins": 3,
+				            "points": 30
+				        }
+				    ],
+				    // # of ms until new game
+				    "delay_ms": 15000
+				}
+			 */
+					
 			case "game_end":
 				JSONArray winner = sHand.getJSONArray("scoreboard");
-				ResultState.setWinningPlayer(winner.getJSONObject(0).getInt("id"));
+				
+				//get score board and reset some things for new game
+				if(winner.getJSONObject(0).getInt("wins") == winner.getJSONObject(1).getInt("wins") && winner.getJSONObject(0).getInt("points") == winner.getJSONObject(1).getInt("points")) {
+					ResultState.setWinningPlayer(winner.getJSONObject(0).getInt("id") + winner.getJSONObject(1).getInt("id"));
+				} else {
+					ResultState.setWinningPlayer(winner.getJSONObject(0).getInt("id"));
+				}
 				ResultState.timer = 15;
 				GameState.gameEnd = true;
 				win = 0;
 				round = 1;
 				break;
+				
+			/*
+			 * {
+				    "msg_type": "client_hand",
+				    "player_id": 0,
+				    "cards": [ ... ]
+				}
+			 */
+				
 			case "client_info":
+				//get player index from server
 				playerIndex = sHand.getInt("player_id");
+				
 				JSONArray pHand = sHand.getJSONArray("cards");
-				for(int i = 0; i <sHand.getJSONArray("cards").length(); i++) {
-					if(GameState.gameEnd || this.hand.size() == sHand.getJSONArray("cards").length()) {
-						this.hand.set(i, new Card(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F));
+				
+				//get hand and account for if the collection exists or not otherwise add each card as it comes
+				for(int i = 0; i <pHand.length(); i++) {
+					if(GameState.gameEnd || this.hand.size() == pHand.length()) {
+						this.hand.set(i, new Card(pHand.getInt(i) >> 4, pHand.getInt(i) & 0x0F));
 					} else {
-						addCard(sHand.getJSONArray("cards").getInt(i) >> 4, sHand.getJSONArray("cards").getInt(i) & 0x0F);
+						addCard(pHand.getInt(i) >> 4, pHand.getInt(i) & 0x0F);
 					}
 				}
 				break;
+				
+			/*
+			 * {
+				    "msg_type": "game_state",
+				    "round": 12, // 1-based
+				    // playing = game in progress
+				    // ended = game has ended
+				    "game_state": "playing",
+				    "players": {
+				        "0": {
+				            "hand_size": 12,
+				            "points": 3
+				        },
+				        "1": {
+				            "hand_size": 12,
+				            "points": 8
+				        }
+				    },
+				    "turn": 0,
+				    // Current cards on the table. 0 = no card for player
+				    // Indices correspond to player indices
+				    "table": [0, 0, 0]
+				}
+			 */
+				
 			case "game_state":
+				
+				//start of game
+				
+				GameState.slapdown = false;
 				voteNew = 0;
 				round = 1;
 				currentPlayer = 0;
@@ -154,24 +293,52 @@ public class Player{
 					GameState.inBounds = false;
 					displayBytes = "";
 				} catch (JSONException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
-				
 				break;
+				
+			/*
+			 * {
+				    "msg_type": "new_game_votes",
+				    "vote_state": [true, false, true] // P1 and P3 have voted; P2 has not
+				}
+			 */
+				
 			case "new_game_votes":
+				
+				//tally votes
+				
 				int temp = 0;
 				for(int i = 0; i < sHand.getJSONArray("vote_state").length(); i++) {
 					temp = temp + (sHand.getJSONArray("vote_state").getBoolean(i) ? 1 : 0);
 				}
 				this.voteNew = temp;
 				break;
+				
+			/*
+			 * {
+				    "msg_type": "client_reject",
+				    "reject_reason": "server_full"
+				}	
+			 */
+				
+			case "client_reject":
+				
+				//client reject
+				
+				System.exit(0);
+				break;
 			}
 			displayBytes = "";
 		} catch (JSONException e) {
-			
+			//e.printStackTrace();
 		}
 	}
 
+	/*
+	 *  | Play card method |
+	 */
+	
 	public void playCard(int selectedCard) throws IOException, ClassNotFoundException, InterruptedException {
 		es.execute(new Thread() {
 			@Override
@@ -219,9 +386,9 @@ public class Player{
 	public void disconnect() {
 		try {
 			es.shutdownNow();
+			socket.close();
 			inputStream.close();
 			outputStream.close();
-			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

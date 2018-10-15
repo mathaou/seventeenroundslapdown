@@ -1,116 +1,78 @@
 package view;
 
 import java.awt.Font;
-import java.awt.GraphicsEnvironment;
 
 import org.lwjgl.input.Keyboard;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
+import org.newdawn.slick.Image;
+import org.newdawn.slick.Input;
 import org.newdawn.slick.Music;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.TrueTypeFont;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
-import org.newdawn.slick.state.transition.FadeOutTransition;
+
+/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
 
 public class MenuState extends BasicGameState{
 	
-	public int timer, loopControl, fontIndex, fontCounter, width, height;
-	
-	public TrueTypeFont[] fontList;
-	
-	public String chars;
-	
-	String fonts[];
-	
 	public static Music messenger;
+	public Image cover;
 	
 	@Override
 	public void init(GameContainer gc, StateBasedGame sbg) throws SlickException {
-		this.timer = 0;
-		this.loopControl = 0;
-		this.fontIndex = 0;
-		this.fontCounter = 0;
-		
-		this.width = 0;
-		this.height = 0;
-		
-		this.chars = "Seventeen Round Slap Down";
-		
-		this.fonts
-		        = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();		
-		
-		loopControl = fonts.length;
-		
-		if(loopControl % 5 == 0) {
-			fontIndex += 5;
-		} else if(loopControl % 4 == 0) {
-			fontIndex += 4;
-		} else if(loopControl % 3 == 0) {
-			fontIndex += 3;
-		} else if(loopControl % 2 == 0) {
-			fontIndex += 2;
-		} else {
-			fontIndex++;
-		}
-		
-		this.fontList = new TrueTypeFont[fontIndex];
-		
-		for(int i = 0; i < fontList.length; i++) {
-			fontList[i] = new TrueTypeFont(new Font(fonts[i], Font.PLAIN, 24), true);
-		}
-		
-		messenger = new Music("res/music/messenger.ogg");
+		messenger = new Music("/res/music/messenger.ogg");
+		cover = new Image("/images/cover.png/");
 	}
 	
 	public static void playMusic() {
-		messenger.loop(1.0f, .5f);
+		messenger.loop(1.0f, .5f);;
 	}
 	
 	@Override
 	public void update(GameContainer gc, StateBasedGame sbg, int d) throws SlickException {
 		
-		timer+=d;
-		
-		if(timer >= 2000) {
-			for(int i = 0; i < fontList.length; i ++) {
-				fontList[i] = new TrueTypeFont(new Font(fonts[fontCounter + i], Font.PLAIN, 24), true);
-			}
-			fontCounter+=fontIndex;
-			timer = 0;
-		}
-		
-		if(fontCounter > fonts.length-30) {
-			fontCounter = 0;
-		}
-		
 		if(gc.getInput().isKeyDown(Keyboard.KEY_ESCAPE)) {
+			GameState.getP1().disconnect();
 			gc.exit();
 		}
+		
 		if(gc.getInput().isKeyDown(Keyboard.KEY_SPACE)) {
 			messenger.stop();
 			sbg.enterState(control.StateBasedRunner.GAME);
 			GameState.playSong();
 		}
+		
+		if(gc.getInput().isKeyPressed(Input.KEY_R)) {
+			sbg.enterState(control.StateBasedRunner.RULE);
+		}
+		
 	}
 	
-	public void drawCentered(TrueTypeFont ttfH, String s, GameContainer c, Graphics g, int offset) {
+	public void drawCentered(TrueTypeFont ttfH, String s, GameContainer c, Graphics g, int offsetX, int offsetY) {
 		int textWidth = ttfH.getWidth(s);
-		g.setFont(ttfH);
-		g.drawString(s, c.getWidth()/2f - textWidth/2f, 
-                c.getHeight()/2f - ttfH.getLineHeight()/2f + offset);
+		g.drawString(s, c.getWidth()/2f - textWidth/2f + offsetX, 
+                c.getHeight()/2f - ttfH.getLineHeight()/2f + offsetY);
 	}
 	
 	@Override
 	public void render(GameContainer gc, StateBasedGame sbg, Graphics g) throws SlickException {
+		g.drawImage(cover.getScaledCopy(gc.getWidth(), gc.getHeight()), 0, 0);
+		
 		g.setBackground(Color.black);
-		g.setColor(Color.pink);
-		for(int i = 0; i < fontList.length; i++) {
-			drawCentered(fontList[i], chars, gc, g, i * 80);
-		}
+		g.setColor(Color.white);
+		
 		g.setFont(new TrueTypeFont(new Font("Arial", Font.BOLD, 25), true));
-		g.drawString("Press [ S p a c e ] to Fight For Your Fate", 50 , gc.getHeight() - 50);
+		g.drawString("Press [ S p a c e ] to Fight For Your Fate", 150 , gc.getHeight()/2 + 30);
+		
+		g.drawString("Press [ R ] for rules...", gc.getWidth() - 400, 50);
+		g.drawString("[ E S C ] to quit...", gc.getWidth() - 400, 100);
 	}
 
 	@Override

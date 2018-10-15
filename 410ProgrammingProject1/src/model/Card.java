@@ -1,7 +1,12 @@
 package model;
 
-import org.newdawn.slick.Image;
 import org.newdawn.slick.SlickException;
+
+/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
 
 public class Card {
 	

@@ -2,17 +2,22 @@ package view;
 
 import java.awt.Font;
 import java.awt.FontFormatException;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import org.lwjgl.input.Keyboard;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Graphics;
-import org.newdawn.slick.Input;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.TrueTypeFont;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
+
+/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
 
 public class ResultState extends BasicGameState{
 
@@ -22,7 +27,7 @@ public class ResultState extends BasicGameState{
 	
 	public TrueTypeFont ttfH;
 	
-	int countDown = 0;
+	private int countDown = 0;
 	
 	public boolean vote = false;
 	
@@ -31,8 +36,9 @@ public class ResultState extends BasicGameState{
 	@Override
 	public void init(GameContainer arg0, StateBasedGame arg1) throws SlickException {
 		try {
-			hind = Font.createFont(Font.TRUETYPE_FONT, new File("res/font/limelight/Limelight.ttf/"));
+			hind = Font.createFont(Font.TRUETYPE_FONT, new FileInputStream("res/font/limelight/Limelight.ttf/"));
 		} catch (FontFormatException | IOException e) {
+			GameState.getP1().disconnect();
 			e.printStackTrace();
 		}
 		hind = hind.deriveFont(Font.BOLD, 40);
@@ -40,8 +46,10 @@ public class ResultState extends BasicGameState{
 	}
 
 	@Override
-	public void update(GameContainer arg0, StateBasedGame arg1, int arg2) throws SlickException {
-		countDown += arg2;
+	public void update(GameContainer gc, StateBasedGame sbg, int d) throws SlickException {
+		countDown += d;
+		
+		//slightly over a second because sometimes the delta between each from is more than 1 so its a pseudo-reliable time keeping device
 		if(countDown > 1200) {
 			countDown = 0;
 			if(timer > 0) {
@@ -49,18 +57,21 @@ public class ResultState extends BasicGameState{
 			}
 		}
 		
-		if(arg0.getInput().isKeyPressed(Keyboard.KEY_V)) {
+		//press v to vote
+		if(gc.getInput().isKeyPressed(Keyboard.KEY_V)) {
 			if(!vote) {
 				GameState.getP1().voteYes();
 				vote = true;
 			}
 		}
 		
-		if(arg0.getInput().isKeyPressed(Keyboard.KEY_ESCAPE)) {
+		//esc to exit
+		if(gc.getInput().isKeyPressed(Keyboard.KEY_ESCAPE)) {
 			GameState.getP1().disconnect();
 			System.exit(0);
 		}
 		
+		//if sufficient votes/ timer == 0 and game is ready to begin
 		if((timer <= 0 && GameState.gameEnd == false) || (GameState.getP1().getVote() == 3 && GameState.gameEnd == false)) {
 			for(int i = 0; i < GameState.getP1().getPs().length; i++) {
 				GameState.getP1().getPs()[i] = 0;
@@ -69,9 +80,11 @@ public class ResultState extends BasicGameState{
 			}
 			vote = false;
 			GameState.wolf.play();
-			arg1.enterState(control.StateBasedRunner.GAME);
+			sbg.enterState(control.StateBasedRunner.GAME);
 		}
 	}
+	
+	//render results
 	
 	@Override
 	public void render(GameContainer c, StateBasedGame sbg, Graphics g) throws SlickException {
@@ -99,6 +112,10 @@ public class ResultState extends BasicGameState{
 	public int getID() {
 		return control.StateBasedRunner.RESULT;
 	}
+	
+	/*
+	 * GETTERS AND SETTERS
+	 */
 	
 	public static void setWinningPlayer(int i) {
 		winningPlayer = i;
