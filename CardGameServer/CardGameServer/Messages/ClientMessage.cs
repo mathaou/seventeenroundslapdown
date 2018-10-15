@@ -1,11 +1,15 @@
-﻿using Newtonsoft.Json.Linq;
+﻿/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CardGameServer.Messages
 {

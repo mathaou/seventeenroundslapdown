@@ -1,4 +1,10 @@
-﻿using CardGameServer.Cards;
+﻿/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+using CardGameServer.Cards;
 using System;
 
 namespace CardGameServer

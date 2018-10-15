@@ -1,4 +1,10 @@
-﻿using CardGameServer.Cards;
+﻿/*
+ * Nicholas Fleck, Matthew Farstad, Shane Saunders, Matthew Dill
+ * CS410 - Software Engineering
+ * 10/14/2018
+ */
+
+using CardGameServer.Cards;
 using CardGameServer.Messages;
 using Newtonsoft.Json.Linq;
 using System;
@@ -115,6 +121,9 @@ namespace CardGameServer
 
                     switch (_game.Settings.Difficulty)
                     {
+                        case 0:
+                            PlayCard(_rng.Next(_hand.Count));
+                            break;
                         case 1:
                             PlayCard(matchingSuitCards.Length > 0 ? matchingSuitCards[minIndex].i : _rng.Next(_hand.Count));
                             break;
